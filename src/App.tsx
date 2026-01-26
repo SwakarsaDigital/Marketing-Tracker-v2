@@ -32,6 +32,9 @@ const CloudOff = ({ size = 20, color = 'currentColor', ...props }) => (
 const Trash = ({ size = 20, color = 'currentColor', ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
 );
+const Eye = ({ size = 20, color = 'currentColor', ...props }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+);
 const LinkIcon = ({ size = 16, color = 'currentColor', ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
 );
@@ -90,7 +93,7 @@ interface AppData {
   influencers: InfluencerData[];
 }
 
-// --- DATA MOCKUP (EMPTY FOR PRODUCTION) ---
+// --- DATA MOCKUP (EMPTY) ---
 const DEFAULT_DATA: AppData = {
   dailyLogs: [],
   influencers: []
@@ -295,6 +298,25 @@ const getStyles = (isDark: boolean, isMobile: boolean) => ({
     textAlign: 'center' as const, border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
     animation: 'fadeIn 0.2s ease-out'
   },
+  // View Modal specific styles (wider)
+  viewModalContent: {
+    backgroundColor: isDark ? '#1f2937' : 'white',
+    padding: '30px', borderRadius: '12px', width: '500px', maxWidth: '95%',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)',
+    textAlign: 'left' as const, border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+    animation: 'fadeIn 0.2s ease-out',
+    maxHeight: '90vh', overflowY: 'auto' as const
+  },
+  viewRow: {
+    display: 'flex', borderBottom: isDark ? '1px solid #374151' : '1px solid #f3f4f6',
+    padding: '12px 0'
+  },
+  viewLabel: {
+    width: '140px', fontWeight: 600, color: isDark ? '#9ca3af' : '#6b7280', fontSize: '13px', flexShrink: 0
+  },
+  viewValue: {
+    flex: 1, color: isDark ? '#f3f4f6' : '#111827', fontSize: '14px', wordBreak: 'break-word' as const
+  },
   btnDelete: {
     backgroundColor: '#dc2626', color: 'white', padding: '10px 20px', borderRadius: '6px',
     border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
@@ -307,9 +329,10 @@ const getStyles = (isDark: boolean, isMobile: boolean) => ({
     cursor: 'pointer', fontWeight: 600, fontSize: '14px',
     transition: 'background-color 0.2s'
   },
-  deleteIcon: {
-    cursor: 'pointer', color: '#ef4444', opacity: 0.8,
-    transition: 'opacity 0.2s', padding: '4px', borderRadius: '4px'
+  actionIcon: {
+    cursor: 'pointer', opacity: 0.8,
+    transition: 'opacity 0.2s', padding: '6px', borderRadius: '4px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
   },
   // --- Filter & Search Styles ---
   filterContainer: {
@@ -344,10 +367,10 @@ const MarketingTracker = () => {
   const [storageMode, setStorageMode] = useState<'LOCAL' | 'FIREBASE'>('LOCAL');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [viewId, setViewId] = useState<number | null>(null);
   const [filterTime, setFilterTime] = useState('All Time');
   const [searchQuery, setSearchQuery] = useState('');
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dbRef = useRef<any>(null);
 
@@ -368,7 +391,6 @@ const MarketingTracker = () => {
       initLocal();
     }
 
-    // Ctrl+F Listener
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
@@ -438,27 +460,14 @@ const MarketingTracker = () => {
     setIsMenuOpen(false);
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const importedData = JSON.parse(e.target?.result as string);
-        if (importedData.dailyLogs) {
-          saveData(importedData);
-          alert("Data imported successfully!");
-        }
-      } catch (error) { alert("Failed to read file."); }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-    setIsMenuOpen(false);
-  };
-
   const updateDailyLog = (id: number, field: keyof DailyLog, value: any) => {
     const newLogs = data.dailyLogs.map(log => log.id === id ? { ...log, [field]: value } : log);
     saveData({ ...data, dailyLogs: newLogs });
+  };
+
+  const updateInfluencer = (id: number, field: keyof InfluencerData, value: any) => {
+    const newInfluencers = data.influencers.map(inf => inf.id === id ? { ...inf, [field]: value } : inf);
+    saveData({ ...data, influencers: newInfluencers });
   };
 
   const addNewRow = () => {
@@ -473,17 +482,26 @@ const MarketingTracker = () => {
 
   const confirmDelete = () => {
     if (deleteId !== null) {
-      const newLogs = data.dailyLogs.filter(log => log.id !== deleteId);
-      saveData({ ...data, dailyLogs: newLogs });
+      if (activeTab === 'daily') {
+        const newLogs = data.dailyLogs.filter(log => log.id !== deleteId);
+        saveData({ ...data, dailyLogs: newLogs });
+      } else if (activeTab === 'influencer') {
+        const newInfluencers = data.influencers.filter(inf => inf.id !== deleteId);
+        saveData({ ...data, influencers: newInfluencers });
+      }
       setDeleteId(null);
     }
   };
+
+  // Helper to find log for viewing
+  const logToView = useMemo(() => {
+    return data.dailyLogs.find(l => l.id === viewId);
+  }, [data.dailyLogs, viewId]);
 
   // --- FILTER & SEARCH LOGIC ---
   const filteredLogs = useMemo(() => {
     let result = data.dailyLogs;
 
-    // 1. Time Filter
     if (filterTime !== 'All Time') {
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -503,7 +521,6 @@ const MarketingTracker = () => {
       });
     }
 
-    // 2. Search Filter (Lead Name)
     if (searchQuery.trim()) {
       const lowerQuery = searchQuery.toLowerCase();
       result = result.filter(log => 
@@ -548,8 +565,6 @@ const MarketingTracker = () => {
               <Save size={14} /> {lastSaved}
             </div>
             <button onClick={handleExport} style={styles.btnAction} title="Download Backup"><Download size={14} /> Export</button>
-            <button onClick={() => fileInputRef.current?.click()} style={styles.btnAction} title="Restore Backup"><Upload size={14} /> Import</button>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{display:'none'}} accept=".json" />
             <button onClick={() => setIsDark(!isDark)} style={{marginLeft: '15px', background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', padding: '4px 8px'}}>
               {isDark ? '☀ Light' : '☾ Dark'}
             </button>
@@ -603,9 +618,6 @@ const MarketingTracker = () => {
               <div style={{padding: '16px 24px', fontSize: '12px', textTransform: 'uppercase', color: '#9ca3af', fontWeight: 600}}>Actions</div>
               <div onClick={handleExport} style={styles.sidebarItem(false)}>
                 <Download size={18} /> Export Data
-              </div>
-              <div onClick={() => fileInputRef.current?.click()} style={styles.sidebarItem(false)}>
-                <Upload size={18} /> Import Data
               </div>
               <div onClick={() => setIsDark(!isDark)} style={styles.sidebarItem(false)}>
                 {isDark ? '☀ Switch to Light Mode' : '☾ Switch to Dark Mode'}
@@ -702,9 +714,9 @@ const MarketingTracker = () => {
                           {row.profileUrl && <a href={row.profileUrl} target="_blank" rel="noreferrer" style={{color:'#0a66c2'}}><LinkIcon size={14}/></a>}
                         </div>
                       </td>
-                      <td style={styles.td}>{row.industry}</td>
-                      <td style={styles.td}>{row.source}</td>
-                      <td style={styles.td}>{row.template}</td>
+                      <td style={styles.td}><input style={styles.input} value={row.industry} onChange={(e) => updateDailyLog(row.id, 'industry', e.target.value)} placeholder="Industry..." /></td>
+                      <td style={styles.td}><input style={styles.input} value={row.source} onChange={(e) => updateDailyLog(row.id, 'source', e.target.value)} placeholder="Source..." /></td>
+                      <td style={styles.td}><input style={styles.input} value={row.template} onChange={(e) => updateDailyLog(row.id, 'template', e.target.value)} placeholder="Template..." /></td>
                       <td style={styles.td}>
                         <select style={styles.select} value={row.interactionType} onChange={(e) => updateDailyLog(row.id, 'interactionType', e.target.value)}>
                           <option>They Asked Directly</option>
@@ -729,9 +741,16 @@ const MarketingTracker = () => {
                           <option>Ghosted</option>
                         </select>
                       </td>
-                      <td style={styles.td}>{row.notes}</td>
-                      <td style={{...styles.td, textAlign: 'center'}}>
-                        <button onClick={() => setDeleteId(row.id)} style={{background: 'none', border: 'none'}}><div style={styles.deleteIcon}><Trash size={16} /></div></button>
+                      <td style={styles.td}><input style={styles.input} value={row.notes} onChange={(e) => updateDailyLog(row.id, 'notes', e.target.value)} placeholder="Notes..." /></td>
+                      <td style={styles.td}>
+                        <div style={{display:'flex', justifyContent: 'center', gap: '8px'}}>
+                          <button onClick={() => setViewId(row.id)} style={{background: 'none', border: 'none'}} title="View Details">
+                            <div style={{...styles.actionIcon, color: '#3b82f6'}}><Eye size={16} /></div>
+                          </button>
+                          <button onClick={() => setDeleteId(row.id)} style={{background: 'none', border: 'none'}} title="Delete">
+                            <div style={{...styles.actionIcon, color: '#ef4444'}}><Trash size={16} /></div>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -756,24 +775,28 @@ const MarketingTracker = () => {
                   <th style={styles.th}>Created Date</th>
                   <th style={styles.th}>Total Leads</th>
                   <th style={styles.th}>Status</th>
+                  <th style={styles.th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {data.influencers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{...styles.td, textAlign: 'center', padding: '20px', color: '#9ca3af'}}>
+                    <td colSpan={7} style={{...styles.td, textAlign: 'center', padding: '20px', color: '#9ca3af'}}>
                       No influencer data yet.
                     </td>
                   </tr>
                 ) : (
                   data.influencers.map((inf) => (
                     <tr key={inf.id}>
-                      <td style={styles.td}>{inf.name}</td>
-                      <td style={styles.td}>{inf.followers}</td>
+                      <td style={styles.td}><input style={styles.input} value={inf.name} onChange={(e) => updateInfluencer(inf.id, 'name', e.target.value)} placeholder="Name..." /></td>
+                      <td style={styles.td}><input style={styles.input} value={inf.followers} onChange={(e) => updateInfluencer(inf.id, 'followers', e.target.value)} placeholder="Followers..." /></td>
                       <td style={styles.td}><code style={{backgroundColor: isDark ? '#374151' : '#f3f4f6', padding:'2px 6px', borderRadius:'4px', color: isDark ? '#a78bfa' : '#7c3aed', fontWeight:'bold'}}>{inf.code}</code></td>
                       <td style={styles.td}>{inf.dateCreated}</td>
                       <td style={styles.td}><strong>{inf.leads}</strong></td>
                       <td style={styles.td}><span style={styles.badge('#16a34a')}>{inf.status}</span></td>
+                      <td style={{...styles.td, textAlign: 'center'}}>
+                        <button onClick={() => setDeleteId(inf.id)} style={{background: 'none', border: 'none'}}><div style={{...styles.actionIcon, color: '#ef4444'}}><Trash size={16} /></div></button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -840,6 +863,83 @@ const MarketingTracker = () => {
           </div>
         )}
       </div>
+
+      {/* VIEW DETAILS MODAL */}
+      {viewId !== null && logToView && (
+        <div style={styles.modalOverlay} onClick={() => setViewId(null)}>
+          <div style={styles.viewModalContent} onClick={e => e.stopPropagation()}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb', paddingBottom: '10px'}}>
+              <h3 style={{fontSize: '20px', fontWeight: 700, margin: 0, color: isDark ? '#fff' : '#111'}}>Lead Details</h3>
+              <button onClick={() => setViewId(null)} style={{background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#9ca3af' : '#6b7280'}}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div style={styles.viewRow}>
+              <div style={styles.viewLabel}>Date</div>
+              <div style={styles.viewValue}>{logToView.date}</div>
+            </div>
+            <div style={styles.viewRow}>
+              <div style={styles.viewLabel}>Lead Name</div>
+              <div style={styles.viewValue}>{logToView.leadName}</div>
+            </div>
+            <div style={styles.viewRow}>
+              <div style={styles.viewLabel}>LinkedIn Profile</div>
+              <div style={styles.viewValue}>
+                {logToView.profileUrl ? (
+                  <a href={logToView.profileUrl} target="_blank" rel="noreferrer" style={{color:'#2563eb', display:'flex', alignItems:'center', gap:'4px'}}>
+                    {logToView.profileUrl} <LinkIcon size={12}/>
+                  </a>
+                ) : '-'}
+              </div>
+            </div>
+            <div style={styles.viewRow}>
+              <div style={styles.viewLabel}>Industry/Role</div>
+              <div style={styles.viewValue}>{logToView.industry || '-'}</div>
+            </div>
+            <div style={styles.viewRow}>
+              <div style={styles.viewLabel}>Source</div>
+              <div style={styles.viewValue}>{logToView.source || '-'}</div>
+            </div>
+            <div style={styles.viewRow}>
+              <div style={styles.viewLabel}>Template Used</div>
+              <div style={styles.viewValue}>{logToView.template || '-'}</div>
+            </div>
+            <div style={styles.viewRow}>
+              <div style={styles.viewLabel}>Interaction Type</div>
+              <div style={styles.viewValue}>{logToView.interactionType}</div>
+            </div>
+            <div style={styles.viewRow}>
+              <div style={styles.viewLabel}>Jonathan Tagged?</div>
+              <div style={styles.viewValue}>{logToView.tagged ? 'Yes' : 'No'}</div>
+            </div>
+            <div style={styles.viewRow}>
+              <div style={styles.viewLabel}>Response Time</div>
+              <div style={styles.viewValue}>
+                <span style={{
+                  padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 600,
+                  backgroundColor: logToView.responseTime.includes("48+") ? (isDark ? '#7f1d1d' : '#fee2e2') : (isDark ? '#111827' : '#f0fdf4'),
+                  color: logToView.responseTime.includes("48+") ? (isDark ? '#fca5a5' : '#dc2626') : (isDark ? '#fff' : '#166534')
+                }}>
+                  {logToView.responseTime}
+                </span>
+              </div>
+            </div>
+            <div style={styles.viewRow}>
+              <div style={styles.viewLabel}>Status</div>
+              <div style={styles.viewValue}>{logToView.status}</div>
+            </div>
+            <div style={{...styles.viewRow, borderBottom: 'none'}}>
+              <div style={styles.viewLabel}>Notes</div>
+              <div style={styles.viewValue}>{logToView.notes || '-'}</div>
+            </div>
+
+            <div style={{marginTop: '24px', display: 'flex', justifyContent: 'flex-end'}}>
+              <button style={styles.btnCancel} onClick={() => setViewId(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* DELETE MODAL */}
       {deleteId !== null && (
