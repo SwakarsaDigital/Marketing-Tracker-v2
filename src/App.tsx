@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 
 // --- ICONS (INLINE SVG) ---
 // Updated icons to accept ...props (style, className, etc.)
@@ -19,9 +19,6 @@ const Save = ({ size = 20, color = 'currentColor', ...props }) => (
 );
 const Download = ({ size = 20, color = 'currentColor', ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-);
-const Upload = ({ size = 20, color = 'currentColor', ...props }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
 );
 const Cloud = ({ size = 20, color = 'currentColor', ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
@@ -824,7 +821,7 @@ const MarketingTracker = () => {
                 </div>
                 <div style={styles.card}>
                   <div style={styles.kpiLabel}>Avg Response Time</div>
-                  <div style={styles.kpiValue}>
+                  <div style={{...styles.kpiValue, color: '#111'}}>
                     {data.dailyLogs.length > 0 ? "< 2h" : "-"}
                   </div>
                   <div style={{fontSize:'12px', color: isDark ? '#9ca3af' : '#6b7280', marginTop:'5px'}}>Within Target</div>
