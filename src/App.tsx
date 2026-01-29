@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 // --- CONFIGURATION ---
 // Your Google Apps Script URL (Ensure it ends with /exec)
