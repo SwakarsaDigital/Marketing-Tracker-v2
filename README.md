@@ -1,194 +1,159 @@
-<div align="center">
+📈 Marketing Engagement Tracker
 
-<h1>📈 Marketing Performance Tracker</h1>
+Aplikasi pelacak kinerja pemasaran (Marketing Tracker) berbasis web yang modern, responsif, dan mudah digunakan. Aplikasi ini dirancang untuk tim marketing guna mencatat prospek (leads), melacak performa influencer, dan memantau KPI (Key Performance Indicators) secara real-time.
 
-<p>
-<strong>A robust, real-time, and offline-capable dashboard for modern marketing teams.</strong>
-</p>
+Ditenagai oleh React di frontend dan Google Sheets sebagai database backend gratis dan fleksibel melalui Google Apps Script.
 
-<p>
-<a href="#-key-features">Key Features</a> •
-<a href="#-tech-stack">Tech Stack</a> •
-<a href="#-getting-started">Getting Started</a> •
-<a href="#-usage-guide">Usage Guide</a>
-</p>
+✨ Fitur Utama
 
-</div>
+1. 📝 Input Data Prospek (Daily Log)
 
-<br />
+Formulir Intuitif: Input data prospek baru dengan mudah melalui modal pop-up yang rapi.
 
-📖 Overview
+Validasi Otomatis: Memastikan nama dan link profil LinkedIn terisi.
 
-Marketing Performance Tracker is a specialized tool designed to streamline the workflow of marketing teams. It replaces messy spreadsheets with a clean, interactive Single Page Application (SPA). It allows teams to track daily engagements, monitor influencer performance, and analyze weekly KPIs automatically.
+Pencarian Cepat: Fitur pencarian real-time untuk menemukan data prospek berdasarkan nama.
 
-Whether you are working Offline on a flight or collaborating Real-time with your team, this app handles data seamlessly.
+Filter Cerdas: Aplikasi otomatis mengabaikan baris header atau data sampah dari spreadsheet.
 
-✨ Key Features
+2. 📊 Dashboard KPI (Real-time)
 
-<table>
-<tr>
-<td width="50%">
-<h3>🔄 Hybrid Storage System</h3>
-<ul>
-<li><strong>Offline Mode (Local):</strong> Zero setup required. Data persists in your browser's LocalStorage. Perfect for individual use.</li>
-<li><strong>Online Mode (Cloud):</strong> Seamlessly syncs data across all team members using <strong>Firebase Firestore</strong>.</li>
-</ul>
-</td>
-<td width="50%">
-<h3>📊 3-in-1 Dashboard</h3>
-<ul>
-<li><strong>Daily Tracker:</strong> Log interactions with validation (Dropdowns, Checkboxes).</li>
-<li><strong>Influencer Hub:</strong> Track promo codes and lead generation.</li>
-<li><strong>KPI Analytics:</strong> Auto-calculated weekly summaries & visual benchmarks.</li>
-</ul>
-</td>
-</tr>
-<tr>
-<td colspan="2">
-<h3>🚀 Productivity Boosters</h3>
-<ul>
-<li><strong>JSON Backup:</strong> One-click <code>Export</code> and <code>Import</code> to share data manually.</li>
-<li><strong>Smart Filters:</strong> Filter leads by <em>Today, Last 7 Days,</em> or <em>This Month</em>.</li>
-<li><strong>Instant Search:</strong> Quick-find leads using <code>Ctrl + F</code> shortcut.</li>
-<li><strong>Visual Alerts:</strong> Auto-highlight <span style="color:red">red</span> for responses delayed >48 hours.</li>
-<li><strong>Responsive Design:</strong> Fully optimized for Desktop, Tablet, and Mobile.</li>
-</ul>
-</td>
-</tr>
-</table>
+Ringkasan Statistik: Lihat total leads, direct asks, dan conversion rate secara instan.
 
-💻 Tech Stack
+Visualisasi Data: Kartu statistik yang jelas dan mudah dibaca.
 
-Built with the latest web technologies for speed and reliability.
+Analisis Konversi: Melacak seberapa efektif strategi pemasaran Anda dalam mengubah prospek menjadi klien.
 
-Core
+3. 🌟 Analisis Influencer & Sumber
 
-Styling & Assets
+Pelacakan Sumber: Identifikasi sumber trafik terbaik (misal: "Viral Post #1" atau "IG Story @InfluencerA").
 
-Backend (Optional)
+Rating Otomatis: Sistem penilaian otomatis (Excellent/Good/Average) berdasarkan jumlah leads yang dihasilkan oleh setiap sumber.
+
+4. 🌓 Tampilan Modern & Responsif
+
+Mode Gelap (Dark Mode): Dukungan penuh untuk tema terang dan gelap sesuai preferensi pengguna.
+
+Mobile Friendly: Tampilan yang optimal di perangkat seluler dengan navigasi bar di bagian bawah.
+
+Notifikasi Toast: Umpan balik visual yang elegan saat data berhasil disimpan atau gagal.
+
+🚀 Cara Instalasi & Penggunaan
+
+Prasyarat
+
+Node.js (versi 16 atau lebih baru)
+
+Akun Google (untuk Google Sheets)
+
+Langkah 1: Persiapan Google Sheets (Backend)
+
+Buat Google Sheet baru di Google Drive Anda.
+
+Beri nama Sheet (Tab) utama sebagai Sheet1 (atau sesuaikan, default biasanya Sheet1).
+
+Buat Header di Baris 1 dengan urutan persis seperti ini:
+
+Date of Contact
+
+Lead Name
+
+LinkedIn Profile URL
+
+Industry/Role
+
+Source Post/Influencer
+
+Template Used
+
+Interaction Type
+
+Jonathan Tagged?
+
+Response Time
+
+Conversion Status
+
+Notes/Feedback
+
+Marketer
+
+Langkah 2: Setup Google Apps Script
+
+Di Google Sheet, klik menu Extensions > Apps Script.
+
+Hapus kode yang ada, lalu salin kode backend (tersedia di dokumentasi terpisah atau minta kepada pengembang).
+
+Klik Deploy > New Deployment.
+
+Pilih type Web App.
+
+Konfigurasi:
+
+Description: "Versi 1"
+
+Execute as: "Me" (email Anda)
+
+Who has access: "Anyone" (Siapa saja)
+
+Klik Deploy dan salin Web App URL (akhiran /exec).
+
+Langkah 3: Setup Aplikasi React (Frontend)
+
+Clone repository ini atau download source code.
+
+Buka file src/App.tsx.
+
+Cari variabel GAS_API_URL di bagian atas file.
+
+Ganti nilainya dengan URL Web App yang Anda salin di Langkah 2.
+
+const GAS_API_URL = "[https://script.google.com/macros/s/...../exec](https://script.google.com/macros/s/...../exec)";
 
 
+Buka terminal di folder proyek dan jalankan perintah:
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-🚀 Getting Started
-
-Follow these simple steps to get a local copy up and running.
-
-Prerequisites
-
-Node.js (v14 or higher)
-
-npm or yarn
-
-Installation
-
-Clone the repository
-
-git clone [https://github.com/your-username/marketing-tracker.git](https://github.com/your-username/marketing-tracker.git)
-cd marketing-tracker
-
-
-Install dependencies
-
+# Install dependencies
 npm install
 
-
-Start the development server
-
+# Jalankan server development
 npm run dev
 
 
-Open your browser and visit http://localhost:5173/.
+Buka browser di alamat yang muncul (biasanya http://localhost:5173).
 
-☁️ Online Mode Configuration (Optional)
+🛠️ Teknologi yang Digunakan
 
-By default, the app runs in Offline Mode. To enable real-time collaboration:
+React: Framework UI utama.
 
-Create a project at Firebase Console.
+Vite: Build tool yang super cepat.
 
-Navigate to Project Settings > General > Your apps.
+TypeScript: Untuk keamanan tipe data dan pengembangan yang lebih baik.
 
-Copy your firebaseConfig object.
+Google Apps Script: Sebagai API serverless untuk menghubungkan React dengan Google Sheets.
 
-Open src/App.tsx and replace the placeholder config:
+CSS-in-JS: Styling dinamis tanpa library CSS berat.
 
-// src/App.tsx
+📝 Panduan Pengisian Form "Add New Lead"
 
-const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:..."
-};
+Saat menambahkan lead baru, berikut panduan pengisian kolomnya:
 
+Lead Name: Nama lengkap orang yang dihubungi.
 
-Success: The app will automatically detect the config and switch the badge to ONLINE.
+LinkedIn URL: Link profil LinkedIn mereka.
 
-📖 Usage Guide
+Industry: Bidang pekerjaan mereka (misal: IT, Finance).
 
-📝 Managing Leads
+Source / Post: Dari mana mereka tahu kita? (misal: Postingan Viral #1).
 
-Go to the Daily Engagement tab.
+Type:
 
-Click the green + Add button.
+Direct Ask: Mereka bertanya duluan.
 
-Fill in the details. Tip: Use the dropdowns for consistent data.
+Offered: Kita menawarkan jasa/produk.
 
-Edit: Click any cell to modify content instantly.
+Tagged?: Centang jika mereka men-tag kita di komentar.
 
-Delete: Click the Trash Icon (🗑️) to remove a row.
+Notes: Catatan tambahan penting.
 
-🔍 Search & Filter
-
-Search: Press Ctrl + F or click the search box to find specific names.
-
-Time Filter: Use the dropdown next to the search bar to view leads from Today, Last 7 Days, etc.
-
-💾 Backup Data (Offline Mode)
-
-If you are not using Firebase, you can still share data:
-
-Click Export in the header to download a .json file.
-
-Send the file to your colleague.
-
-They click Import to load your data into their browser.
-
-📂 Project Structure
-
-marketing-tracker/
-├── public/              # Static assets (favicons, etc.)
-├── src/
-│   ├── App.tsx          # Main Application Logic (Single File Architecture)
-│   ├── main.tsx         # Entry Point
-│   └── index.css        # Global Styles
-├── package.json         # Dependencies
-├── tsconfig.json        # TypeScript Configuration
-└── vite.config.ts       # Vite Configuration
-
-
-<div align="center">
-
-
-
-
-
-<sub>Built with ❤️ for High Performance Marketing Teams</sub>
-</div>
+Dibuat dengan ❤️ untuk Tim Marketing Swakarsa Digital.
