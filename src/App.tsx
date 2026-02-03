@@ -4,8 +4,10 @@ import { useEffect, useState, useMemo } from 'react';
 // URL Google Apps Script Anda
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx3QUHELuwkzr8gOxEQLnOF5ivne2cnbmGo1ZUGviJ6iPrGZTqGpH4hybHAuqpvqgxO/exec";
 
-// PIN Keamanan (Default 1234)
-const SECURITY_PIN = "1234";
+// PIN Keamanan
+// Catatan: Di lingkungan preview ini, kita gunakan string langsung untuk mencegah error "import.meta empty".
+// Jika di local/production, Anda bisa menggantinya menjadi: import.meta.env.VITE_APP_PIN || "1234"
+const SECURITY_PIN = "1234"; 
 
 // --- ICONS ---
 const FileText = ({ size = 20, color = 'currentColor', ...props }: any) => (
@@ -200,7 +202,7 @@ const PinModal = ({ isOpen, onClose, onSubmit, isDark, styles }: any) => {
       <div style={styles.modalOverlay} onClick={onClose}>
         <div style={{...styles.modalContent, width: '300px', textAlign: 'center'}} onClick={e => e.stopPropagation()}>
            <Lock size={40} color={isDark ? '#e5e7eb' : '#374151'} style={{margin: '0 auto 15px auto', display: 'block'}} />
-           <h3 style={{marginTop:0, color: isDark?'white':'#1f2937'}}>Security Check</h3>
+           <h3 style={{marginTop:0, color: isDark?'white':'#1f2937'}}>Pemeriksaan Keamanan</h3>
            <p style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '20px'}}>
              Masukkan PIN 4-digit untuk melanjutkan.
            </p>
@@ -340,7 +342,7 @@ export default function App() {
       }
     } catch (error) {
       console.error("Error fetching data:", error);
-      showNotification("Connection failed. Check console.", 'error');
+      showNotification("Koneksi gagal. Cek konsol.", 'error');
     } finally {
       setLoading(false);
     }
@@ -380,6 +382,7 @@ export default function App() {
   const handleFormSubmit = (data: any) => {
     // If we are editing, we require PIN before saving
     if (editingLead) {
+      setIsModalOpen(false); // CLOSE THE EDIT MODAL HERE
       setPendingAction({ type: 'edit', payload: data });
       setIsPinModalOpen(true);
     } else {
@@ -422,13 +425,20 @@ export default function App() {
         body: JSON.stringify(payload)
       });
 
-      showNotification(`Action ${action} submitted successfully!`, 'success');
+      // Show specific message for edit overwrite
+      if (action === 'edit') {
+        showNotification('Edit terkonfirmasi. Data berhasil diperbarui (tertimpa).', 'success');
+      } else if (action === 'delete') {
+        showNotification('Data berhasil dihapus.', 'success');
+      } else {
+        showNotification('Data baru berhasil ditambahkan.', 'success');
+      }
       
       // Delay fetch slightly to allow GAS to update
       setTimeout(() => fetchData(), 1500);
 
     } catch (error) {
-      showNotification('Failed to execute action.', 'error');
+      showNotification('Gagal melakukan aksi.', 'error');
     } finally {
       setLoading(false);
       setEditingLead(null);
