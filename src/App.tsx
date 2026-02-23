@@ -1,13 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
 
 // --- CONFIGURATION ---
-// URL Google Apps Script Anda
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx3QUHELuwkzr8gOxEQLnOF5ivne2cnbmGo1ZUGviJ6iPrGZTqGpH4hybHAuqpvqgxO/exec";
+// URL Google Apps Script Anda (Sudah diperbarui dengan link baru)
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx0TaLAHHMxE3JANtOYcmhQIZxxHsBXLkoGFAqr4Fdy8M6_SIWScP8o90cFRsTS9l2r/exec";
 
-// PIN Keamanan
-// Catatan: Di lingkungan preview ini, kita gunakan string langsung untuk mencegah error "import.meta empty".
-// Jika di local/production, Anda bisa menggantinya menjadi: import.meta.env.VITE_APP_PIN || "1234"
-const SECURITY_PIN = "1234"; 
+// PIN Keamanan untuk Edit/Delete
+const SECURITY_PIN = "Yoyomagey1@"; 
 
 // --- ICONS ---
 const FileText = ({ size = 20, color = 'currentColor', ...props }: any) => (
@@ -53,8 +51,9 @@ const Lock = ({ size = 48, color = 'currentColor', ...props }: any) => (
 // --- TYPES ---
 interface DailyLog {
   id: number;
-  rowNumber: number; // needed for GAS to identify row
+  rowNumber: number;
   date: string;
+  rawDateIso: string; // Ditambahkan untuk fungsi filter tanggal yang lebih akurat
   leadName: string;
   profileUrl: string;
   industry: string;
@@ -79,6 +78,188 @@ interface NotificationState {
   message: string;
   type: 'success' | 'error';
 }
+
+// --- CUSTOM HOOKS (ANIMATION) ---
+// Hook untuk menunda proses unmount (penghapusan dari DOM) agar animasi keluar (exit) sempat berjalan
+function useDelayUnmount(isMounted: boolean, delayTime: number) {
+  const [shouldRender, setShouldRender] = useState(false);
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    if (isMounted && !shouldRender) {
+      setShouldRender(true);
+    } else if (!isMounted && shouldRender) {
+      timeoutId = setTimeout(() => setShouldRender(false), delayTime);
+    }
+    return () => clearTimeout(timeoutId);
+  }, [isMounted, delayTime, shouldRender]);
+  return shouldRender;
+}
+
+// --- COMPONENTS ---
+
+// 1. Loader Seluruh Layar (Memproses)
+const FullScreenLoader = ({ isOpen, isDark }: { isOpen: boolean, isDark: boolean }) => {
+  const shouldRender = useDelayUnmount(isOpen, 250);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) setIsClosing(false);
+    else setIsClosing(true);
+  }, [isOpen]);
+
+  if (!shouldRender) return null;
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: isDark ? 'rgba(17, 24, 39, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+      backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center',
+      zIndex: 9999, animation: isClosing ? 'fadeOut 0.25s ease-out forwards' : 'fadeIn 0.25s ease-out forwards'
+    }}>
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
+        backgroundColor: isDark ? '#1f2937' : 'white',
+        padding: '30px 40px', borderRadius: '20px',
+        boxShadow: isDark ? '0 10px 25px rgba(0,0,0,0.5)' : '0 10px 25px rgba(0,0,0,0.1)',
+        border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+        animation: isClosing ? 'scaleOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards' : 'scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+      }}>
+        <div style={{
+          width: '45px', height: '45px', border: '4px solid',
+          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+          borderTopColor: '#16a34a', borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+        <div style={{ fontWeight: 600, color: isDark ? 'white' : '#374151', animation: 'pulse 1.5s ease-in-out infinite', fontSize: '15px' }}>
+           Memproses Data...
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 2. Pembungkus Modal Dinamis & Teranimasi
+const AnimatedModal = ({ isOpen, onClose, children, styles, contentStyle }: any) => {
+  const shouldRender = useDelayUnmount(isOpen, 250);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) setIsClosing(false);
+    else setIsClosing(true);
+  }, [isOpen]);
+
+  if (!shouldRender) return null;
+
+  return (
+    <div style={{...styles.modalOverlay, animation: isClosing ? 'fadeOut 0.25s ease-out forwards' : 'fadeIn 0.25s ease-out forwards'}} onMouseDown={onClose}>
+       <div style={{...styles.modalContent, ...contentStyle, animation: isClosing ? 'scaleOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards' : 'scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards'}} onMouseDown={e => e.stopPropagation()}>
+         {children}
+       </div>
+    </div>
+  );
+};
+
+// 3. Notifikasi Sukses/Error
+const NotificationToast = ({ notification, onClose }: { notification: NotificationState, onClose: () => void }) => {
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    // Mulai animasi keluar sebelum benar-benar unmount
+    const animTimer = setTimeout(() => setIsClosing(true), 2700); 
+    const unmountTimer = setTimeout(onClose, 3000);
+    return () => { clearTimeout(animTimer); clearTimeout(unmountTimer); };
+  }, [onClose]);
+
+  const handleManualClose = () => {
+    setIsClosing(true);
+    setTimeout(onClose, 300);
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', top: '24px', right: '24px', zIndex: 3000,
+      backgroundColor: notification.type === 'success' ? '#10b981' : '#ef4444',
+      color: 'white', padding: '14px 24px', borderRadius: '12px',
+      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+      display: 'flex', alignItems: 'center', gap: '12px',
+      fontWeight: 600, fontSize: '14px',
+      animation: isClosing ? 'slideOut 0.3s ease-in forwards' : 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+    }}>
+      {notification.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+      <span>{notification.message}</span>
+      <button onClick={handleManualClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', marginLeft: '12px', display: 'flex', padding: '4px', opacity: 0.8 }}>
+        <X size={16} />
+      </button>
+    </div>
+  );
+};
+
+// 4. Modal Konfirmasi Hapus Data
+const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, isDark, styles }: any) => {
+  return (
+    <AnimatedModal isOpen={isOpen} onClose={onClose} styles={styles} contentStyle={{ width: '350px', textAlign: 'center', padding: '30px 24px' }}>
+       <AlertCircle size={56} color="#ef4444" style={{margin: '0 auto 16px auto', display: 'block'}} />
+       <h3 style={{marginTop:0, color: isDark?'white':'#1f2937', fontSize: '20px'}}>{title}</h3>
+       <p style={{fontSize: '14px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '24px', lineHeight: 1.5}}>
+         {message}
+       </p>
+       <div style={{display: 'flex', gap: '12px'}}>
+          <button type="button" onClick={onClose} style={{flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#374151', cursor: 'pointer', fontWeight: 600}}>Batal</button>
+          <button type="button" onClick={() => { onConfirm(); onClose(); }} style={{flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#ef4444', color: 'white', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)'}}>Ya, Hapus</button>
+       </div>
+    </AnimatedModal>
+  )
+};
+
+// 5. PIN/Password Modal
+const PinModal = ({ isOpen, onClose, onSubmit, isDark, styles }: any) => {
+    const [pin, setPin] = useState('');
+    const [error, setError] = useState('');
+  
+    const handleSubmit = (e: any) => {
+      e.preventDefault();
+      if (pin === SECURITY_PIN) {
+        onSubmit();
+        setPin('');
+        setError('');
+        onClose();
+      } else {
+        setError('Password Salah! Akses ditolak.');
+        setPin('');
+      }
+    };
+  
+    return (
+      <AnimatedModal isOpen={isOpen} onClose={() => { onClose(); setPin(''); setError(''); }} styles={styles} contentStyle={{ width: '320px', textAlign: 'center' }}>
+         <Lock size={48} color={isDark ? '#e5e7eb' : '#374151'} style={{margin: '0 auto 15px auto', display: 'block'}} />
+         <h3 style={{marginTop:0, color: isDark?'white':'#1f2937', fontSize: '18px'}}>Login Admin</h3>
+         <p style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '24px'}}>
+           Masukkan password admin untuk mengakses fitur Edit dan Delete.
+         </p>
+         <form onSubmit={handleSubmit}>
+            <input 
+              type="password" 
+              value={pin}
+              autoFocus
+              onChange={(e) => setPin(e.target.value)}
+              placeholder="Password"
+              style={{
+                ...styles.input, 
+                textAlign: 'center', 
+                fontSize: '16px', 
+                marginBottom: '15px',
+                padding: '12px'
+              }} 
+            />
+            {error && <div style={{color: '#ef4444', fontSize: '12px', marginBottom: '10px'}}>{error}</div>}
+            <div style={{display: 'flex', gap: '10px'}}>
+               <button type="button" onClick={() => { onClose(); setPin(''); setError(''); }} style={{flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#374151', cursor: 'pointer', fontWeight: 500}}>Batal</button>
+               <button type="submit" style={{flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#166534', color: 'white', fontWeight: 600, cursor: 'pointer'}}>Verifikasi</button>
+            </div>
+         </form>
+      </AnimatedModal>
+    );
+};
 
 // --- DYNAMIC STYLES ---
 const LXStyles = (isDark: boolean, isMobile: boolean) => ({
@@ -137,14 +318,12 @@ const LXStyles = (isDark: boolean, isMobile: boolean) => ({
   modalOverlay: {
     position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)',
-    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
-    animation: 'fadeIn 0.2s ease-out'
+    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
   },
   modalContent: {
     backgroundColor: isDark ? '#1f2937' : 'white', padding: '24px', borderRadius: '16px', width: '450px', maxWidth: '95%',
     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxHeight: '90vh', overflowY: 'auto' as const,
-    border: isDark ? '1px solid #374151' : 'none',
-    animation: 'scaleIn 0.2s ease-out'
+    border: isDark ? '1px solid #374151' : 'none'
   },
   actionBtn: {
     padding: '6px', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -152,103 +331,31 @@ const LXStyles = (isDark: boolean, isMobile: boolean) => ({
   }
 });
 
-// --- COMPONENTS ---
-
-const NotificationToast = ({ notification, onClose }: { notification: NotificationState, onClose: () => void }) => {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 3000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  return (
-    <div style={{
-      position: 'fixed', top: '24px', right: '24px', zIndex: 2000,
-      backgroundColor: notification.type === 'success' ? '#10b981' : '#ef4444',
-      color: 'white', padding: '12px 24px', borderRadius: '8px',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-      display: 'flex', alignItems: 'center', gap: '12px',
-      fontWeight: 500, fontSize: '14px', animation: 'slideIn 0.3s ease-out'
-    }}>
-      {notification.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-      <span>{notification.message}</span>
-      <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', marginLeft: '8px', display: 'flex' }}>
-        <X size={16} />
-      </button>
-    </div>
-  );
-};
-
-// --- PIN MODAL COMPONENT ---
-const PinModal = ({ isOpen, onClose, onSubmit, isDark, styles }: any) => {
-    const [pin, setPin] = useState('');
-    const [error, setError] = useState('');
-  
-    if (!isOpen) return null;
-  
-    const handleSubmit = (e: any) => {
-      e.preventDefault();
-      if (pin === SECURITY_PIN) {
-        onSubmit();
-        setPin('');
-        setError('');
-        onClose();
-      } else {
-        setError('PIN Salah! Akses ditolak.');
-        setPin('');
-      }
-    };
-  
-    return (
-      <div style={styles.modalOverlay} onClick={onClose}>
-        <div style={{...styles.modalContent, width: '300px', textAlign: 'center'}} onClick={e => e.stopPropagation()}>
-           <Lock size={40} color={isDark ? '#e5e7eb' : '#374151'} style={{margin: '0 auto 15px auto', display: 'block'}} />
-           <h3 style={{marginTop:0, color: isDark?'white':'#1f2937'}}>Pemeriksaan Keamanan</h3>
-           <p style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '20px'}}>
-             Masukkan PIN 4-digit untuk melanjutkan.
-           </p>
-           <form onSubmit={handleSubmit}>
-              <input 
-                type="password" 
-                maxLength={4}
-                value={pin}
-                autoFocus
-                onChange={(e) => setPin(e.target.value)}
-                placeholder="****"
-                style={{
-                  ...styles.input, 
-                  textAlign: 'center', 
-                  fontSize: '24px', 
-                  letterSpacing: '8px',
-                  marginBottom: '15px'
-                }} 
-              />
-              {error && <div style={{color: '#ef4444', fontSize: '12px', marginBottom: '10px'}}>{error}</div>}
-              <div style={{display: 'flex', gap: '10px'}}>
-                 <button type="button" onClick={onClose} style={{flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#374151', cursor: 'pointer'}}>Batal</button>
-                 <button type="submit" style={{flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#166534', color: 'white', fontWeight: 600, cursor: 'pointer'}}>Verifikasi</button>
-              </div>
-           </form>
-        </div>
-      </div>
-    );
-};
 
 // --- MAIN APP ---
 export default function App() {
   const [activeTab, setActiveTab] = useState<'daily' | 'influencer' | 'kpi'>('daily');
   const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
   const [kpiStats, setKpiStats] = useState<KPIStats | null>(null);
+  
+  // Loading Master
   const [loading, setLoading] = useState(false);
   
   // Modals & Forms
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<DailyLog | null>(null);
   
-  // PIN Logic
-  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<{type: 'delete' | 'edit', payload: any} | null>(null);
+  // Admin Login Logic
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
+  // Custom Confirm Delete Logic
+  const [confirmDeleteState, setConfirmDeleteState] = useState<{isOpen: boolean, lead: DailyLog | null}>({isOpen: false, lead: null});
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  
   const [notification, setNotification] = useState<NotificationState | null>(null);
   
   const [isDark, setIsDark] = useState(false);
@@ -292,13 +399,6 @@ export default function App() {
         .map((row: any, idx: number) => {
           const isArray = Array.isArray(row);
           const values = isArray ? row : Object.values(row);
-          // Assuming the raw data has the row number or we can use index + header offset
-          // Usually GAS returns raw values. We need a way to ID the row for editing. 
-          // SIMPLEST WAY: Send the original index from the sheet (assuming header is row 1, data starts row 2)
-          // The "id" used here is mostly for React keys. For GAS delete/edit, we might need a unique ID column or row index.
-          // For this implementation, I will assume we pass "rowNumber" or a unique ID if available. 
-          // If not available, we might need to modify backend to return row index. 
-          // Let's assume `id` generated here correlates to array index for now, but ideally backend returns row ID.
           
           const getValue = (keyName: string, index: number) => {
             if (!isArray && row[keyName] !== undefined) return row[keyName];
@@ -307,25 +407,33 @@ export default function App() {
 
           let rawDate = getValue("Date of Contact", 0);
           let dateStr = '-';
+          let rawDateIso = ''; 
+          
           if (rawDate) {
              try {
                const d = new Date(rawDate);
                if (!isNaN(d.getTime())) {
                    dateStr = d.toLocaleDateString('en-US');
+                   const offset = d.getTimezoneOffset() * 60000;
+                   const localISOTime = (new Date(d.getTime() - offset)).toISOString().slice(0, 10);
+                   rawDateIso = localISOTime;
                } else {
                    dateStr = String(rawDate);
+                   rawDateIso = String(rawDate);
                }
              } catch(e) {
                dateStr = String(rawDate);
+               rawDateIso = String(rawDate);
              }
           }
 
           return {
             id: idx,
-            rowNumber: idx + 2, // Assuming header is row 1
+            rowNumber: idx + 2, 
             date: dateStr,
+            rawDateIso: rawDateIso,
             leadName: getValue("Lead Name", 1) || '-',
-            profileUrl: getValue("LinkedIn Profile URL", 2) || '',
+            profileUrl: getValue("Bukti Google Drive", 2) || getValue("LinkedIn Profile URL", 2) || '',
             industry: getValue("Industry/Role", 3) || '-',
             source: getValue("Source Post/Influencer", 4) || '-',
             template: getValue("Template Used", 5) || '-',
@@ -334,7 +442,7 @@ export default function App() {
             responseTime: getValue("Response Time", 8) || '-',
             status: getValue("Conversion Status", 9) || 'New',
             notes: getValue("Notes/Feedback", 10) || '',
-            marketer: getValue("Marketer", 11) || '' // Default empty string, not "Jon"
+            marketer: getValue("Marketer", 11) || '' 
           };
         });
 
@@ -359,8 +467,13 @@ export default function App() {
         (log.leadName && log.leadName.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
+    if (dateFilter.trim()) {
+      result = result.filter(log => 
+        log.rawDateIso === dateFilter || log.date.includes(dateFilter)
+      );
+    }
     return result;
-  }, [dailyLogs, searchQuery]);
+  }, [dailyLogs, searchQuery, dateFilter]);
 
   const conversionRate = useMemo(() => {
     if (!kpiStats || kpiStats.totalLeads === 0) return 0;
@@ -369,9 +482,14 @@ export default function App() {
 
   // --- ACTIONS HANDLERS ---
   
+  const handleCloseLeadModal = () => {
+    setIsModalOpen(false);
+    // Menghapus state sedikit tertunda agar animasi out selesai sebelum teks berubah
+    setTimeout(() => setEditingLead(null), 250);
+  };
+
   const handleDeleteClick = (lead: DailyLog) => {
-    setPendingAction({ type: 'delete', payload: lead });
-    setIsPinModalOpen(true);
+    setConfirmDeleteState({ isOpen: true, lead });
   };
 
   const handleEditClick = (lead: DailyLog) => {
@@ -380,42 +498,21 @@ export default function App() {
   };
 
   const handleFormSubmit = (data: any) => {
-    // If we are editing, we require PIN before saving
+    handleCloseLeadModal(); // Memicu animasi keluar pada modal
     if (editingLead) {
-      setIsModalOpen(false); // CLOSE THE EDIT MODAL HERE
-      setPendingAction({ type: 'edit', payload: data });
-      setIsPinModalOpen(true);
+      performAction('edit', data);
     } else {
-      // Adding new lead usually doesn't need PIN, or as per preference. 
-      // Assuming Create is free, Edit/Delete is protected.
       performAction('create', data);
     }
   };
 
-  const handlePinSuccess = () => {
-    if (pendingAction) {
-      if (pendingAction.type === 'delete') {
-        performAction('delete', pendingAction.payload);
-      } else if (pendingAction.type === 'edit') {
-        performAction('edit', pendingAction.payload);
-      }
-    }
-    setPendingAction(null);
-  };
-
   const performAction = async (action: 'create' | 'edit' | 'delete', data: any) => {
     setLoading(true);
-    // Close modal if open
-    setIsModalOpen(false); 
     
     try {
-      // Prepare payload based on action
       const payload = {
         action: action,
         ...data,
-        // For edit/delete we need to identify the row. 
-        // Using leadName + date or rowNumber if backend supports it.
-        // Assuming backend works with 'rowNumber' or simply appending for 'create'.
         rowNumber: data.rowNumber 
       };
 
@@ -425,23 +522,21 @@ export default function App() {
         body: JSON.stringify(payload)
       });
 
-      // Show specific message for edit overwrite
       if (action === 'edit') {
-        showNotification('Edit terkonfirmasi. Data berhasil diperbarui (tertimpa).', 'success');
+        showNotification('Edit terkonfirmasi. Data berhasil diperbarui.', 'success');
       } else if (action === 'delete') {
-        showNotification('Data berhasil dihapus.', 'success');
+        showNotification('Data berhasil dihapus dari sistem.', 'success');
       } else {
         showNotification('Data baru berhasil ditambahkan.', 'success');
       }
       
-      // Delay fetch slightly to allow GAS to update
-      setTimeout(() => fetchData(), 1500);
+      // Memberikan jeda sebelum fetch agar Google Apps Script sempat update cell
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await fetchData(); 
 
     } catch (error) {
       showNotification('Gagal melakukan aksi.', 'error');
-    } finally {
       setLoading(false);
-      setEditingLead(null);
     }
   };
 
@@ -449,23 +544,41 @@ export default function App() {
     <div style={styles.container}>
       {/* GLOBAL STYLE FOR ANIMATIONS */}
       <style>{`
-        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideIn { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(50px); opacity: 0; } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.9); opacity: 0; } }
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
       `}</style>
+
+      {/* FULL SCREEN LOADING */}
+      <FullScreenLoader isOpen={loading} isDark={isDark} />
 
       {/* NOTIFICATION TOAST */}
       {notification && <NotificationToast notification={notification} onClose={() => setNotification(null)} />}
 
-      {/* PIN MODAL */}
+      {/* LOGIN ADMIN MODAL */}
       <PinModal 
-        isOpen={isPinModalOpen} 
-        onClose={() => { setIsPinModalOpen(false); setPendingAction(null); }} 
-        onSubmit={handlePinSuccess}
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+        onSubmit={() => setIsAdmin(true)}
         isDark={isDark}
         styles={styles}
+      />
+
+      {/* CONFIRM DELETE MODAL */}
+      <ConfirmModal
+         isOpen={confirmDeleteState.isOpen}
+         onClose={() => setConfirmDeleteState({ ...confirmDeleteState, isOpen: false })}
+         onConfirm={() => { if (confirmDeleteState.lead) performAction('delete', confirmDeleteState.lead) }}
+         title="Konfirmasi Hapus"
+         message={`Apakah Anda yakin ingin menghapus data pemasaran atas nama ${confirmDeleteState.lead?.leadName}? Data ini akan hilang permanen.`}
+         isDark={isDark}
+         styles={styles}
       />
 
       {/* HEADER */}
@@ -483,8 +596,11 @@ export default function App() {
            </div>
         </div>
         <div style={{display:'flex', gap:'10px'}}>
+          <button onClick={() => isAdmin ? setIsAdmin(false) : setIsLoginModalOpen(true)} style={{background: isAdmin ? '#ef4444' : '#3b82f6', border:'none', color:'white', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor: 'pointer', fontWeight: 600}}>
+             {isAdmin ? 'Logout Admin' : 'Login Admin'}
+          </button>
           <button onClick={fetchData} style={{background:'none', border:'none', color:'white', cursor:'pointer', opacity: 0.8}} title="Refresh Data">
-            <RefreshCw size={20} className={loading ? 'spin' : ''} />
+            <RefreshCw size={20} />
           </button>
           <button onClick={() => setIsDark(!isDark)} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor: 'pointer', fontWeight: 500}}>
              {isDark ? 'Light' : 'Dark'}
@@ -520,16 +636,33 @@ export default function App() {
         {/* --- TAB 1: DAILY LOG --- */}
         {activeTab === 'daily' && (
           <div>
-            <div style={{display:'flex', justifyContent:'space-between', marginBottom:'20px', flexWrap:'wrap', gap:'10px'}}>
-               <div style={{display:'flex', gap:'10px', flex:1}}>
-                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex:1, maxWidth: '400px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+            <div style={{display:'flex', justifyContent:'space-between', marginBottom:'20px', flexWrap:'wrap', gap:'10px', alignItems: 'center'}}>
+               <div style={{display:'flex', gap:'10px', flex:1, flexWrap: 'wrap'}}>
+                  {/* Filter by Name */}
+                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex:1, maxWidth: '250px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
                      <SearchIcon size={16} color="#9ca3af"/>
                      <input 
-                       placeholder="Search by name..." 
+                       placeholder="Cari nama..." 
                        value={searchQuery}
                        onChange={(e) => setSearchQuery(e.target.value)}
                        style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '13px'}}
                      />
+                  </div>
+                  
+                  {/* Filter by Date */}
+                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex:1, maxWidth: '200px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                     <input 
+                       type="date"
+                       title="Filter berdasarkan tanggal"
+                       value={dateFilter}
+                       onChange={(e) => setDateFilter(e.target.value)}
+                       style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '13px'}}
+                     />
+                  </div>
+
+                  {/* Total Baris Indicator */}
+                  <div style={{display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: '13px', fontWeight: 600, color: isDark ? '#d1d5db' : '#4b5563'}}>
+                    Total Row: {filteredLogs.length}
                   </div>
                </div>
                <button onClick={() => { setEditingLead(null); setIsModalOpen(true); }} style={styles.btnPrimary}>
@@ -544,7 +677,7 @@ export default function App() {
                       <th style={styles.th}>Actions</th>
                       <th style={styles.th}>Date</th>
                       <th style={styles.th}>Lead Name</th>
-                      <th style={styles.th}>Link</th>
+                      <th style={styles.th}>Bukti GDrive</th> 
                       <th style={styles.th}>Industry</th>
                       <th style={styles.th}>Source</th>
                       <th style={styles.th}>Template</th>
@@ -559,20 +692,26 @@ export default function App() {
                   <tbody>
                     {filteredLogs.length === 0 ? (
                        <tr><td colSpan={13} style={{padding:'40px', textAlign:'center', color:'#6b7280'}}>
-                         {loading ? 'Loading data...' : 'No data available.'}
+                         Tidak ada data.
                        </td></tr>
                     ) : (
                        filteredLogs.map(row => (
                          <tr key={row.id} style={{backgroundColor: isDark ? 'transparent' : 'white'}}>
                            <td style={styles.td}>
-                             <div style={{display:'flex', gap:'5px'}}>
-                               <button onClick={() => handleEditClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#e0f2fe', color: '#0284c7'}} title="Edit">
-                                 <Edit size={14} />
-                               </button>
-                               <button onClick={() => handleDeleteClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444'}} title="Delete">
-                                 <Trash2 size={14} />
-                               </button>
-                             </div>
+                             {isAdmin ? (
+                               <div style={{display:'flex', gap:'5px'}}>
+                                 <button onClick={() => handleEditClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#e0f2fe', color: '#0284c7'}} title="Edit">
+                                   <Edit size={14} />
+                                 </button>
+                                 <button onClick={() => handleDeleteClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444'}} title="Delete">
+                                   <Trash2 size={14} />
+                                 </button>
+                               </div>
+                             ) : (
+                               <div style={{color: '#9ca3af', display: 'flex', justifyContent: 'center'}} title="Login sebagai Admin untuk Edit/Delete">
+                                 <Lock size={14} />
+                               </div>
+                             )}
                            </td>
                            <td style={styles.td}>{row.date}</td>
                            <td style={styles.td}><span style={{fontWeight: 600}}>{row.leadName}</span></td>
@@ -632,7 +771,7 @@ export default function App() {
                        </tr>
                      ))}
                      {(!kpiStats || kpiStats.postPerformance.length === 0) && (
-                        <tr><td colSpan={3} style={{padding:'40px', textAlign:'center', color:'#6b7280'}}>No performance data available yet.</td></tr>
+                        <tr><td colSpan={3} style={{padding:'40px', textAlign:'center', color:'#6b7280'}}>Belum ada data analitik influencer.</td></tr>
                      )}
                    </tbody>
                 </table>
@@ -667,25 +806,21 @@ export default function App() {
       </div>
 
       {/* MODAL ADD/EDIT LEAD */}
-      {isModalOpen && (
-        <div style={styles.modalOverlay} onClick={() => { setIsModalOpen(false); setEditingLead(null); }}>
-           <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-              <div style={{display:'flex', justifyContent:'space-between', marginBottom:'24px', alignItems: 'center'}}>
-                 <h2 style={{margin:0, fontSize:'20px', fontWeight: 700, color: isDark?'white':'#1f2937'}}>
-                    {editingLead ? 'Edit Lead' : 'Add New Lead'}
-                 </h2>
-                 <button onClick={() => { setIsModalOpen(false); setEditingLead(null); }} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af', padding: '4px'}}>
-                   <X size={24}/>
-                 </button>
-              </div>
-              <AddLeadForm 
-                styles={styles} 
-                initialData={editingLead}
-                onSubmit={handleFormSubmit}
-              />
-           </div>
-        </div>
-      )}
+      <AnimatedModal isOpen={isModalOpen} onClose={handleCloseLeadModal} styles={styles}>
+         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'24px', alignItems: 'center'}}>
+            <h2 style={{margin:0, fontSize:'20px', fontWeight: 700, color: isDark?'white':'#1f2937'}}>
+               {editingLead ? 'Edit Lead' : 'Add New Lead'}
+            </h2>
+            <button onClick={handleCloseLeadModal} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af', padding: '4px'}}>
+              <X size={24}/>
+            </button>
+         </div>
+         <AddLeadForm 
+           styles={styles} 
+           initialData={editingLead}
+           onSubmit={handleFormSubmit}
+         />
+      </AnimatedModal>
 
     </div>
   );
@@ -694,7 +829,7 @@ export default function App() {
 // --- FORM COMPONENT ---
 function AddLeadForm({ styles, initialData, onSubmit }: { styles: any, initialData: DailyLog | null, onSubmit: (data: any) => void }) {
   const [formData, setFormData] = useState({
-    rowNumber: 0, // For Editing
+    rowNumber: 0, 
     name: '', url: '', industry: 'IT/Tech', source: '', 
     template: 'ATS Story', interactionType: 'Direct Ask', 
     tagged: true, notes: '', marketer: '', status: 'New', responseTime: '-'
@@ -736,8 +871,8 @@ function AddLeadForm({ styles, initialData, onSubmit }: { styles: any, initialDa
          <input required name="name" value={formData.name} onChange={handleChange} style={styles.input} placeholder="e.g. John Doe" />
        </div>
        <div>
-         <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>LinkedIn URL</label>
-         <input required type="url" name="url" value={formData.url} onChange={handleChange} style={styles.input} placeholder="https://linkedin.com/in/..." />
+         <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Bukti Google Drive (Link)</label>
+         <input required type="url" name="url" value={formData.url} onChange={handleChange} style={styles.input} placeholder="https://drive.google.com/..." />
        </div>
        <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
          <div>
