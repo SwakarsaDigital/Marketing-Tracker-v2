@@ -20,9 +20,10 @@ const AlertCircle = ({ size = 20, color = 'currentColor', ...props }: any) => (<
 const TrendingUp = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>);
 const Trash2 = ({ size = 18, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>);
 const Edit = ({ size = 18, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>);
-const Lock = ({ size = 48, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>);
+const Lock = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>);
 const Download = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>);
 const CheckSquare = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>);
+const Shield = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>);
 
 // --- TYPES ---
 interface DailyLog {
@@ -43,6 +44,13 @@ interface DailyLog {
   marketer: string;
   email: string;
   approvalStatus: 'None' | 'Pending' | 'Approved';
+}
+
+interface KPIStats {
+  totalLeads: number;
+  directAskCount: number;
+  conversionCount: number;
+  postPerformance: { source: string; count: number; rating: string }[];
 }
 
 interface NotificationState {
@@ -164,7 +172,7 @@ const NotificationToast = ({ notification, onClose }: { notification: Notificati
 // 4. Modal Konfirmasi Universal (Delete, Logout, Approve)
 const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Konfirmasi", confirmColor = "#ef4444", icon = "alert", isDark, styles }: any) => {
   return (
-    <AnimatedModal isOpen={isOpen} onClose={onClose} styles={styles} contentStyle={{ width: '350px', textAlign: 'center', padding: '30px 24px' }}>
+    <AnimatedModal isOpen={isOpen} onClose={onClose} styles={styles} contentStyle={{ width: '400px', textAlign: 'center', padding: '30px 24px' }}>
        {icon === "alert" 
           ? <AlertCircle size={56} color={confirmColor} style={{margin: '0 auto 16px auto', display: 'block'}} />
           : <CheckCircle size={56} color={confirmColor} style={{margin: '0 auto 16px auto', display: 'block'}} />
@@ -254,7 +262,8 @@ const LXStyles = (isDark: boolean, isMobile: boolean) => ({
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'daily' | 'influencer' | 'marketers' | 'kpi'>('daily');
+  // Tambahan tipe tab 'admin'
+  const [activeTab, setActiveTab] = useState<'daily' | 'influencer' | 'marketers' | 'kpi' | 'admin'>('daily');
   const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
   
   // Loading & Auth
@@ -286,6 +295,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [marketerFilter, setMarketerFilter] = useState('');
+  const [showPendingOnly, setShowPendingOnly] = useState(false); // Filter Admin Khusus Pending
   
   // Theme
   const [isDark, setIsDark] = useState(false);
@@ -400,9 +410,13 @@ export default function App() {
       }
       const matchName = log.leadName.toLowerCase().includes(searchQuery.toLowerCase());
       const matchMarketer = marketerFilter ? log.marketer === marketerFilter : true;
-      return matchDate && matchName && matchMarketer;
+      
+      // Filter pending hanya berlaku ketika di tab Admin
+      const matchPending = (activeTab === 'admin' && showPendingOnly) ? log.approvalStatus === 'Pending' : true; 
+
+      return matchDate && matchName && matchMarketer && matchPending;
     });
-  }, [dailyLogs, searchQuery, dateRange, marketerFilter]);
+  }, [dailyLogs, searchQuery, dateRange, marketerFilter, showPendingOnly, activeTab]);
 
   const availableMarketers = useMemo(() => {
     const activeInDateRange = dailyLogs.filter(log => {
@@ -560,16 +574,34 @@ export default function App() {
     }
   };
 
-  // --- HANDLER UNTUK MODAL KONFIRMASI (Logout, Delete, Approve) ---
+  // --- HANDLER UNTUK MODAL KONFIRMASI & LOGIN ---
+  const handleLoginSuccess = () => {
+    setIsAdmin(true);
+    setIsLoginModalOpen(false);
+    setActiveTab('admin'); // Otomatis pindah ke tab Admin setelah sukses
+  };
+
+  const handleTabAdminClick = () => {
+    if (!isAdmin) {
+      setIsLoginModalOpen(true);
+    } else {
+      setActiveTab('admin');
+    }
+  };
+
   const handleLogoutClick = () => {
     setConfirmDialog({
       isOpen: true,
       title: 'Konfirmasi Logout',
-      message: 'Apakah Anda yakin ingin keluar dari mode Admin?',
+      message: 'Apakah Anda yakin ingin keluar dari Admin Dashboard?',
       confirmText: 'Ya, Keluar',
       confirmColor: '#ef4444',
       icon: 'alert',
-      onConfirm: () => setIsAdmin(false)
+      onConfirm: () => {
+         setIsAdmin(false);
+         setShowPendingOnly(false); // Reset filter saat logout
+         setActiveTab('daily');     // Kembalikan ke halaman marketer
+      }
     });
   };
 
@@ -588,8 +620,20 @@ export default function App() {
   const handleApproveClick = (lead: DailyLog) => {
     setConfirmDialog({
       isOpen: true,
-      title: 'Konfirmasi Approval',
-      message: <>Apakah Anda yakin ingin menyetujui lead atas nama <b>{lead.leadName}</b>? Status akan otomatis berubah menjadi "In Progress".</>,
+      title: 'Verifikasi & Approval',
+      message: (
+         <div style={{ textAlign: 'left', backgroundColor: isDark ? '#374151' : '#f3f4f6', padding: '16px', borderRadius: '8px', marginTop: '10px' }}>
+            <div style={{marginBottom: '6px', fontSize: '13px'}}>Nama Lead: <span style={{fontWeight: 600, color: isDark?'white':'black'}}>{lead.leadName}</span></div>
+            <div style={{marginBottom: '6px', fontSize: '13px'}}>Marketer: <span style={{fontWeight: 600, color: isDark?'white':'black'}}>{lead.marketer}</span></div>
+            
+            {/* INI BAGIAN CEK EMAIL */}
+            <div style={{marginBottom: '12px', fontSize: '13px'}}>Email Lead: <span style={{fontWeight: 700, color: '#0284c7'}}>{lead.email || '- Belum diisi marketer -'}</span></div>
+            
+            <div style={{fontSize: '11px', color: isDark ? '#9ca3af' : '#6b7280', borderTop: isDark?'1px solid #4b5563':'1px solid #e5e7eb', paddingTop: '8px', lineHeight: 1.4}}>
+               Cek apakah email di atas sudah terdaftar. Jika sudah, klik "Setujui" di bawah ini. Status akan otomatis berubah menjadi "In Progress".
+            </div>
+         </div>
+      ),
       confirmText: 'Ya, Setujui',
       confirmColor: '#16a34a',
       icon: 'check',
@@ -698,7 +742,7 @@ export default function App() {
       <PinModal 
         isOpen={isLoginModalOpen} 
         onClose={() => setIsLoginModalOpen(false)} 
-        onSubmit={() => setIsAdmin(true)}
+        onSubmit={handleLoginSuccess}
         isDark={isDark} styles={styles}
       />
 
@@ -751,9 +795,8 @@ export default function App() {
            </div>
         </div>
         <div style={{display:'flex', gap:'10px'}}>
-          {/* Tombol Login/Logout Diperbarui dengan Konfirmasi */}
           <button onClick={() => isAdmin ? handleLogoutClick() : setIsLoginModalOpen(true)} style={{background: isAdmin ? '#ef4444' : '#3b82f6', border:'none', color:'white', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor: 'pointer', fontWeight: 600}}>
-             {isAdmin ? 'Logout Admin' : 'Login Admin'}
+             {isAdmin ? 'Keluar Admin' : 'Masuk Admin'}
           </button>
           <button onClick={fetchData} style={{background:'none', border:'none', color:'white', cursor:'pointer', opacity: 0.8}} title="Refresh Data">
             <RefreshCw size={20} />
@@ -764,34 +807,49 @@ export default function App() {
         </div>
       </div>
 
-      {/* TABS */}
+      {/* TABS PENGGUNA */}
       <div style={styles.tabBar}>
         <div onClick={() => setActiveTab('daily')} style={styles.tab(activeTab === 'daily')}><FileText size={16} /> Daily Log</div>
         <div onClick={() => setActiveTab('marketers')} style={styles.tab(activeTab === 'marketers')}><Users size={16} /> Marketers</div>
         <div onClick={() => setActiveTab('influencer')} style={styles.tab(activeTab === 'influencer')}><CheckSquare size={16} /> Influencer Stats</div>
         <div onClick={() => setActiveTab('kpi')} style={styles.tab(activeTab === 'kpi')}><BarChart2 size={16} /> Dashboard KPI</div>
+        
+        {/* Tab Spesial Admin Dashboard (Di kanan) */}
+        <div 
+           onClick={handleTabAdminClick} 
+           style={{...styles.tab(activeTab === 'admin'), marginLeft: 'auto', color: isAdmin ? '#16a34a' : (isDark?'#9ca3af':'#6b7280')}}
+        >
+           {isAdmin ? <Shield size={16} /> : <Lock size={16} />} Admin Dashboard
+        </div>
       </div>
 
+      {/* MOBILE NAV */}
       {isMobile && (
         <div style={{display:'flex', gap:'10px', padding:'12px', overflowX:'auto', borderBottom: isDark ? '1px solid #374151' : '1px solid #ddd'}}>
              <button onClick={() => setActiveTab('daily')} style={{padding:'8px 16px', borderRadius:'20px', border:'none', backgroundColor: activeTab==='daily'?'#166534':'#e5e7eb', color: activeTab==='daily'?'white':'#374151', fontSize:'12px', fontWeight: 600}}>Log</button>
              <button onClick={() => setActiveTab('marketers')} style={{padding:'8px 16px', borderRadius:'20px', border:'none', backgroundColor: activeTab==='marketers'?'#166534':'#e5e7eb', color: activeTab==='marketers'?'white':'#374151', fontSize:'12px', fontWeight: 600}}>Marketers</button>
              <button onClick={() => setActiveTab('influencer')} style={{padding:'8px 16px', borderRadius:'20px', border:'none', backgroundColor: activeTab==='influencer'?'#166534':'#e5e7eb', color: activeTab==='influencer'?'white':'#374151', fontSize:'12px', fontWeight: 600}}>Influencer</button>
              <button onClick={() => setActiveTab('kpi')} style={{padding:'8px 16px', borderRadius:'20px', border:'none', backgroundColor: activeTab==='kpi'?'#166534':'#e5e7eb', color: activeTab==='kpi'?'white':'#374151', fontSize:'12px', fontWeight: 600}}>KPI</button>
+             <button onClick={handleTabAdminClick} style={{padding:'8px 16px', borderRadius:'20px', border:'none', backgroundColor: activeTab==='admin'?(isAdmin?'#16a34a':'#ef4444'):'#fee2e2', color: activeTab==='admin'?'white':'#ef4444', fontSize:'12px', fontWeight: 600}}>Admin</button>
         </div>
       )}
 
       {/* CONTENT AREA */}
       <div style={styles.content}>
         
-        {/* --- TAB 1: DAILY LOG --- */}
-        {activeTab === 'daily' && (
+        {/* --- TAB 1 & 5 : DAILY LOG & ADMIN DASHBOARD --- */}
+        {(activeTab === 'daily' || (activeTab === 'admin' && isAdmin)) && (
           <div>
             <div style={{display:'flex', justifyContent:'space-between', marginBottom:'20px', flexWrap:'wrap', gap:'15px', alignItems: 'flex-start'}}>
                
-               {/* Filter Group */}
                <div style={{display:'flex', gap:'10px', flex:1, flexWrap: 'wrap', alignItems: 'center'}}>
-                  
+                  {/* Judul Halaman dinamis */}
+                  <div style={{width: '100%', marginBottom: '5px'}}>
+                     <h2 style={{fontSize:'18px', margin:0, color: isDark?'white':'#333', fontWeight: 700}}>
+                        {activeTab === 'admin' ? 'Admin Dashboard - Kelola & Setujui Leads' : 'Daily Log - Semua Leads'}
+                     </h2>
+                  </div>
+
                   {/* Name Search */}
                   <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: '1 1 200px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
                      <SearchIcon size={16} color="#9ca3af"/>
@@ -818,16 +876,29 @@ export default function App() {
                      </select>
                   </div>
 
+                  {/* Total Row */}
                   <div style={{fontSize: '13px', fontWeight: 600, color: isDark ? '#d1d5db' : '#4b5563', padding: '0 5px'}}>
                     Total Row: {filteredLogs.length}
                   </div>
+
+                  {/* Filter Khusus Tab Admin: Show Pending Only */}
+                  {activeTab === 'admin' && (
+                     <div style={{display:'flex', alignItems:'center', padding: '0 10px', backgroundColor: showPendingOnly ? (isDark ? '#422006' : '#fef3c7') : 'transparent', borderRadius: '8px', transition: 'all 0.2s'}}>
+                        <label style={{display:'flex', alignItems:'center', gap: '6px', cursor: 'pointer', fontSize:'13px', color: showPendingOnly ? (isDark ? '#fbbf24' : '#b45309') : (isDark ? '#d1d5db' : '#4b5563'), fontWeight: 600}}>
+                           <input type="checkbox" checked={showPendingOnly} onChange={(e) => setShowPendingOnly(e.target.checked)} style={{width: '16px', height: '16px'}} />
+                           Filter Pending Approval
+                        </label>
+                     </div>
+                  )}
+
                </div>
 
                {/* Action Buttons */}
-               <div style={{display: 'flex', gap: '10px'}}>
+               <div style={{display: 'flex', gap: '10px', height: 'fit-content'}}>
                   <button onClick={handleExportCSV} style={{...styles.btnPrimary, backgroundColor: '#0284c7'}} title="Export ke Excel/CSV">
                     <Download size={16} /> <span style={{display: isMobile?'none':'inline'}}>Export</span>
                   </button>
+                  {/* Tombol New Lead tetap ada untuk memudahkan input */}
                   <button onClick={() => { setEditingLead(null); setIsModalOpen(true); }} style={styles.btnPrimary}>
                     <span>+</span> <span style={{display: isMobile?'none':'inline'}}>New Lead</span>
                   </button>
@@ -838,7 +909,8 @@ export default function App() {
                <table style={styles.table}>
                   <thead>
                     <tr>
-                      <th style={styles.th}>Actions</th>
+                      {/* Tampilkan kolom Action hanya di Tab Admin */}
+                      {activeTab === 'admin' && <th style={styles.th}>⚙️ Actions</th>}
                       <th style={styles.th}>Date</th>
                       <th style={styles.th}>Lead Name</th>
                       <th style={styles.th}>Bukti GDrive</th> 
@@ -859,33 +931,42 @@ export default function App() {
                     ) : (
                        filteredLogs.map(row => (
                          <tr key={row.id} style={{backgroundColor: isDark ? 'transparent' : 'white'}}>
-                           <td style={styles.td}>
-                             {isAdmin ? (
-                               <div style={{display:'flex', gap:'5px', alignItems: 'center'}}>
-                                 <button onClick={() => {setEditingLead(row); setIsModalOpen(true);}} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#e0f2fe', color: '#0284c7'}} title="Edit"><Edit size={14} /></button>
-                                 <button onClick={() => handleDeleteClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444'}} title="Delete"><Trash2 size={14} /></button>
-                               </div>
-                             ) : (
-                               <div style={{color: '#9ca3af', display: 'flex', justifyContent: 'center'}} title="Login Admin untuk Edit"><Lock size={14} /></div>
-                             )}
-                           </td>
+                           
+                           {/* Fitur Hapus/Edit HANYA MUNCUL DI TAB ADMIN */}
+                           {activeTab === 'admin' && (
+                              <td style={styles.td}>
+                                <div style={{display:'flex', gap:'5px', alignItems: 'center'}}>
+                                  <button onClick={() => {setEditingLead(row); setIsModalOpen(true);}} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#e0f2fe', color: '#0284c7'}} title="Edit"><Edit size={14} /></button>
+                                  <button onClick={() => handleDeleteClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444'}} title="Delete"><Trash2 size={14} /></button>
+                                </div>
+                              </td>
+                           )}
+
                            <td style={styles.td}>{row.date}</td>
                            <td style={styles.td}><span style={{fontWeight: 600}}>{row.leadName}</span></td>
                            <td style={styles.td}>{row.profileUrl && <a href={row.profileUrl} target="_blank" rel="noreferrer" style={{color:'#2563eb', display: 'flex', alignItems: 'center'}}><LinkIcon size={16}/></a>}</td>
                            <td style={styles.td}>{row.email || '-'}</td>
+                           
                            <td style={styles.td}>
-                              {row.approvalStatus === 'Pending' && isAdmin ? (
-                                 <button onClick={() => handleApproveClick(row)} style={{fontSize:'11px', padding: '4px 8px', borderRadius:'6px', background: '#16a34a', color:'white', border:'none', cursor:'pointer', fontWeight: 600}}>Approve</button>
-                              ) : row.approvalStatus === 'Pending' ? (
-                                 <span style={{color: '#d97706', fontSize: '12px', fontWeight: 600}}>Pending...</span>
-                              ) : row.approvalStatus === 'Approved' ? (
-                                 <span style={{color: '#16a34a', fontSize: '12px', fontWeight: 600, display:'flex', alignItems:'center', gap:'4px'}}><CheckSquare size={12}/> Approved</span>
-                              ) : (
+                              {activeTab === 'admin' ? (
+                                 /* TAMPILAN KHUSUS ADMIN DASHBOARD */
                                  row.status === 'New' ? (
-                                    <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'11px', padding: '4px 8px', borderRadius:'6px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'black', border:isDark?'1px solid #4b5563':'1px solid #ddd', cursor:'pointer'}}>Req. Approval</button>
+                                    <button onClick={() => handleApproveClick(row)} style={{fontSize:'11px', padding: '4px 8px', borderRadius:'6px', background: '#16a34a', color:'white', border:'none', cursor:'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px'}}>
+                                       <CheckSquare size={12}/> Approve
+                                    </button>
+                                 ) : <span style={{color:'#9ca3af', fontSize:'11px'}}>-</span>
+                              ) : (
+                                 /* TAMPILAN DAILY LOG MARKETER BISA */
+                                 row.status === 'New' ? (
+                                    row.approvalStatus === 'Pending' ? (
+                                       <span style={{color: '#d97706', fontSize: '12px', fontWeight: 600}}>Pending...</span>
+                                    ) : (
+                                       <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'11px', padding: '4px 8px', borderRadius:'6px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'black', border:isDark?'1px solid #4b5563':'1px solid #ddd', cursor:'pointer'}}>Req. Approval</button>
+                                    )
                                  ) : <span style={{color:'#9ca3af', fontSize:'11px'}}>-</span>
                               )}
                            </td>
+
                            <td style={styles.td}>
                              <span style={{
                                padding:'4px 10px', borderRadius:'20px', fontSize:'11px', fontWeight:600,
@@ -906,6 +987,16 @@ export default function App() {
                </table>
             </div>
           </div>
+        )}
+
+        {/* Jika User bypass dan memaksa masuk Admin Panel tanpa Login */}
+        {activeTab === 'admin' && !isAdmin && (
+           <div style={{textAlign: 'center', padding: '60px 20px'}}>
+              <Lock size={64} color="#ef4444" style={{margin: '0 auto 20px auto'}} />
+              <h2 style={{color: isDark?'white':'#333', marginBottom: '10px'}}>Akses Terkunci</h2>
+              <p style={{color: '#6b7280', marginBottom: '20px'}}>Anda harus masuk sebagai admin untuk melihat halaman ini.</p>
+              <button onClick={() => setIsLoginModalOpen(true)} style={{...styles.btnPrimary, margin: '0 auto'}}>Masuk Admin</button>
+           </div>
         )}
 
         {/* --- TAB 2: MARKETERS PAGE --- */}
@@ -1124,6 +1215,7 @@ function AddLeadForm({ styles, initialData, onSubmit }: { styles: any, initialDa
          <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Bukti Google Drive (Link)</label>
          <input required type="url" name="url" value={formData.url} onChange={handleChange} style={styles.input} placeholder="https://drive.google.com/..." />
        </div>
+       
        <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
          <div>
            <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Industry</label>
@@ -1155,6 +1247,14 @@ function AddLeadForm({ styles, initialData, onSubmit }: { styles: any, initialDa
            </div>
          )}
        </div>
+
+       {/* Fitur Edit Email Khusus Admin (Bila Ada Typo) */}
+       {initialData && (
+          <div>
+            <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Email Lead</label>
+            <input type="email" name="email" value={formData.email} onChange={handleChange} style={styles.input} placeholder="Belum ada email dari marketer" />
+          </div>
+       )}
 
        <div style={{display: 'flex', alignItems: 'center'}}>
           <label style={{display:'flex', alignItems:'center', gap: '8px', cursor: 'pointer', fontSize:'13px', color: '#374151', fontWeight: 500}}>
