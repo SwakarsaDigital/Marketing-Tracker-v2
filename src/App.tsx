@@ -45,13 +45,6 @@ interface DailyLog {
   approvalStatus: 'None' | 'Pending' | 'Approved';
 }
 
-interface KPIStats {
-  totalLeads: number;
-  directAskCount: number;
-  conversionCount: number;
-  postPerformance: { source: string; count: number; rating: string }[];
-}
-
 interface NotificationState {
   message: string;
   type: 'success' | 'error' | 'info';
@@ -263,7 +256,6 @@ const LXStyles = (isDark: boolean, isMobile: boolean) => ({
 export default function App() {
   const [activeTab, setActiveTab] = useState<'daily' | 'influencer' | 'marketers' | 'kpi'>('daily');
   const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
-  const [kpiStats, setKpiStats] = useState<KPIStats | null>(null);
   
   // Loading & Auth
   const [loading, setLoading] = useState(false);
@@ -317,10 +309,6 @@ export default function App() {
     try {
       const timestamp = new Date().getTime();
       const apiUrl = `${GAS_API_URL}?t=${timestamp}`;
-
-      const resSummary = await fetch(`${apiUrl}&action=getSummary`);
-      const dataSummary = await resSummary.json();
-      setKpiStats(dataSummary);
 
       const resLogs = await fetch(apiUrl);
       const dataLogs = await resLogs.json();
