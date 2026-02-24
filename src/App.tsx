@@ -46,13 +46,6 @@ interface DailyLog {
   approvalStatus: 'None' | 'Pending' | 'Approved';
 }
 
-interface KPIStats {
-  totalLeads: number;
-  directAskCount: number;
-  conversionCount: number;
-  postPerformance: { source: string; count: number; rating: string }[];
-}
-
 interface NotificationState {
   message: string;
   type: 'success' | 'error' | 'info';
