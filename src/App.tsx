@@ -43,7 +43,7 @@ interface DailyLog {
   notes: string;
   marketer: string;
   email: string;
-  approvalStatus: 'None' | 'Pending' | 'Approved';
+  approvalStatus: 'None' | 'Pending' | 'Approved' | 'Declined';
 }
 
 interface NotificationState {
@@ -255,7 +255,6 @@ const LXStyles = (isDark: boolean, isMobile: boolean) => ({
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
-  // Tambahan tipe tab 'admin'
   const [activeTab, setActiveTab] = useState<'daily' | 'influencer' | 'marketers' | 'kpi' | 'admin'>('daily');
   const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
   
@@ -265,19 +264,16 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [notification, setNotification] = useState<NotificationState | null>(null);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+
   // Modals Data
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<DailyLog | null>(null);
   
-  // Generic Confirm Dialog State
   const [confirmDialog, setConfirmDialog] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: React.ReactNode;
-    confirmText: string;
-    confirmColor: string;
-    icon: 'alert' | 'check';
-    onConfirm: () => void;
+    isOpen: boolean; title: string; message: React.ReactNode; confirmText: string; confirmColor: string; icon: 'alert' | 'check'; onConfirm: () => void;
   }>({ isOpen: false, title: '', message: '', confirmText: 'Ya', confirmColor: '#ef4444', icon: 'alert', onConfirm: () => {} });
 
   // Approval Modal
@@ -288,7 +284,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [marketerFilter, setMarketerFilter] = useState('');
-  const [showPendingOnly, setShowPendingOnly] = useState(false); // Filter Admin Khusus Pending
+  const [marketerSearchQuery, setMarketerSearchQuery] = useState(''); // Untuk halaman Marketers
   
   // Theme
   const [isDark, setIsDark] = useState(false);
@@ -303,6 +299,12 @@ export default function App() {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     if (window.matchMedia('(prefers-color-scheme: dark)').matches) setIsDark(true);
+    
+    // Auto Login Feature
+    if (localStorage.getItem('isAdminLoggedIn') === 'true') {
+       setIsAdmin(true);
+    }
+    
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -359,7 +361,7 @@ export default function App() {
 
           return {
             id: idx,
-            rowNumber: idx + 2, // Asumsi header ada di baris 1 spreadsheet
+            rowNumber: idx + 2,
             date: dateStr,
             rawDateIso: rawDateIso,
             leadName: getValue("Lead Name", 1) || '-',
@@ -404,13 +406,14 @@ export default function App() {
       const matchName = log.leadName.toLowerCase().includes(searchQuery.toLowerCase());
       const matchMarketer = marketerFilter ? log.marketer === marketerFilter : true;
       
-      // Filter pending hanya berlaku ketika di tab Admin
-      const matchPending = (activeTab === 'admin' && showPendingOnly) ? log.approvalStatus === 'Pending' : true; 
+      // Admin Dashboard HANYA menampilkan yang Pending
+      const matchPending = activeTab === 'admin' ? log.approvalStatus === 'Pending' : true; 
 
       return matchDate && matchName && matchMarketer && matchPending;
     });
-  }, [dailyLogs, searchQuery, dateRange, marketerFilter, showPendingOnly, activeTab]);
+  }, [dailyLogs, searchQuery, dateRange, marketerFilter, activeTab]);
 
+  // Dropdown Marketer Dinamis (Hanya yg punya data di rentang waktu terpilih)
   const availableMarketers = useMemo(() => {
     const activeInDateRange = dailyLogs.filter(log => {
       let matchDate = true;
@@ -425,15 +428,36 @@ export default function App() {
   }, [dailyLogs, dateRange]);
 
 
+  // Pagination Calculation
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+  const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Reset page ke 1 kalau filter berubah
+  useEffect(() => {
+     setCurrentPage(1);
+  }, [searchQuery, dateRange, marketerFilter, activeTab, itemsPerPage]);
+
   // --- DYNAMIC KPIs ---
   const globalKpiStats = useMemo(() => {
-    let totalLeads = dailyLogs.length;
+    // KPI HANYA MENGHITUNG DARI LOG YANG TERFILTER (berdasarkan Tanggal & Marketer)
+    const kpiLogs = dailyLogs.filter(log => {
+       let matchDate = true;
+       if (dateRange.start || dateRange.end) {
+          const logDate = new Date(log.rawDateIso);
+          if (dateRange.start) matchDate = matchDate && logDate >= new Date(dateRange.start);
+          if (dateRange.end) matchDate = matchDate && logDate <= new Date(dateRange.end);
+       }
+       const matchMarketer = marketerFilter ? log.marketer === marketerFilter : true;
+       return matchDate && matchMarketer;
+    });
+
+    let totalLeads = kpiLogs.length;
     let directAskCount = 0;
     let conversionCount = 0;
     
     const sourceMap: Record<string, number> = {};
 
-    dailyLogs.forEach(log => {
+    kpiLogs.forEach(log => {
       if (log.interactionType === 'Direct Ask') directAskCount++;
       if (log.status === 'Deal/Signed') conversionCount++;
       
@@ -451,7 +475,7 @@ export default function App() {
       .sort((a, b) => b.count - a.count);
 
     return { totalLeads, directAskCount, conversionCount, postPerformance };
-  }, [dailyLogs]);
+  }, [dailyLogs, dateRange, marketerFilter]);
 
   const conversionRate = useMemo(() => {
     if (globalKpiStats.totalLeads === 0) return 0;
@@ -462,31 +486,40 @@ export default function App() {
   // --- MARKETERS PAGE STATS ---
   const marketersStatsList = useMemo(() => {
     const stats: Record<string, any> = {};
-    const logsToUse = (dateRange.start || dateRange.end) 
-      ? dailyLogs.filter(log => {
-          let matchDate = true;
+    
+    dailyLogs.forEach(log => {
+       const mName = log.marketer || 'Unknown';
+       if (!stats[mName]) {
+          stats[mName] = { name: mName, totalLeads: 0, deals: 0, directAsks: 0, lastUpdate: log.rawDateIso };
+       }
+
+       // Track Last Update dari semua log marketer tersebut
+       if (log.rawDateIso > stats[mName].lastUpdate) {
+           stats[mName].lastUpdate = log.rawDateIso;
+       }
+
+       let matchDate = true;
+       if (dateRange.start || dateRange.end) {
           const logDate = new Date(log.rawDateIso);
           if (dateRange.start) matchDate = matchDate && logDate >= new Date(dateRange.start);
           if (dateRange.end) matchDate = matchDate && logDate <= new Date(dateRange.end);
-          return matchDate;
-        })
-      : dailyLogs;
-
-    logsToUse.forEach(log => {
-       const mName = log.marketer || 'Unknown';
-       if (!stats[mName]) {
-          stats[mName] = { name: mName, totalLeads: 0, deals: 0, directAsks: 0 };
        }
-       stats[mName].totalLeads += 1;
-       if (log.status === 'Deal/Signed') stats[mName].deals += 1;
-       if (log.interactionType === 'Direct Ask') stats[mName].directAsks += 1;
+
+       if (matchDate) {
+           stats[mName].totalLeads += 1;
+           if (log.status === 'Deal/Signed') stats[mName].deals += 1;
+           if (log.interactionType === 'Direct Ask') stats[mName].directAsks += 1;
+       }
     });
 
     return Object.values(stats).map(m => ({
        ...m,
+       status: m.totalLeads > 0 ? 'Active' : 'Non-active', // Aktif jika punya lead di rentang waktu
        conversionRate: m.totalLeads > 0 ? ((m.deals / m.totalLeads) * 100).toFixed(1) : '0.0'
-    })).sort((a, b) => b.totalLeads - a.totalLeads);
-  }, [dailyLogs, dateRange]);
+    }))
+    .filter(m => m.name.toLowerCase().includes(marketerSearchQuery.toLowerCase())) // Search filter
+    .sort((a, b) => b.totalLeads - a.totalLeads);
+  }, [dailyLogs, dateRange, marketerSearchQuery]);
 
 
   // --- EXPORT TO EXCEL / CSV ---
@@ -496,7 +529,7 @@ export default function App() {
       return;
     }
     
-    const headers = ['Date', 'Lead Name', 'Industry', 'Source', 'Template', 'Type', 'Tagged', 'Response Time', 'Status', 'Notes', 'Marketer', 'Email', 'Approval Status'];
+    const headers = ['Date', 'Lead Name', 'Industry', 'Source', 'Template', 'Type', 'Tagged', 'Response Time', 'Status', 'Notes', 'Marketer', 'Lead Email', 'Approval Status'];
     const csvRows = [headers.join(',')];
 
     filteredLogs.forEach(row => {
@@ -570,8 +603,9 @@ export default function App() {
   // --- HANDLER UNTUK MODAL KONFIRMASI & LOGIN ---
   const handleLoginSuccess = () => {
     setIsAdmin(true);
+    localStorage.setItem('isAdminLoggedIn', 'true');
     setIsLoginModalOpen(false);
-    setActiveTab('admin'); // Otomatis pindah ke tab Admin setelah sukses
+    setActiveTab('admin'); 
   };
 
   const handleTabAdminClick = () => {
@@ -592,8 +626,8 @@ export default function App() {
       icon: 'alert',
       onConfirm: () => {
          setIsAdmin(false);
-         setShowPendingOnly(false); // Reset filter saat logout
-         setActiveTab('daily');     // Kembalikan ke halaman marketer
+         localStorage.removeItem('isAdminLoggedIn');
+         setActiveTab('daily'); 
       }
     });
   };
@@ -618,19 +652,28 @@ export default function App() {
          <div style={{ textAlign: 'left', backgroundColor: isDark ? '#374151' : '#f3f4f6', padding: '16px', borderRadius: '8px', marginTop: '10px' }}>
             <div style={{marginBottom: '6px', fontSize: '13px'}}>Nama Lead: <span style={{fontWeight: 600, color: isDark?'white':'black'}}>{lead.leadName}</span></div>
             <div style={{marginBottom: '6px', fontSize: '13px'}}>Marketer: <span style={{fontWeight: 600, color: isDark?'white':'black'}}>{lead.marketer}</span></div>
-            
-            {/* INI BAGIAN CEK EMAIL */}
-            <div style={{marginBottom: '12px', fontSize: '13px'}}>Email Lead: <span style={{fontWeight: 700, color: '#0284c7'}}>{lead.email || '- Belum diisi marketer -'}</span></div>
-            
+            <div style={{marginBottom: '12px', fontSize: '13px'}}>Lead Email: <span style={{fontWeight: 700, color: '#0284c7'}}>{lead.email || '- Belum diisi -'}</span></div>
             <div style={{fontSize: '11px', color: isDark ? '#9ca3af' : '#6b7280', borderTop: isDark?'1px solid #4b5563':'1px solid #e5e7eb', paddingTop: '8px', lineHeight: 1.4}}>
-               Cek apakah email di atas sudah terdaftar. Jika sudah, klik "Setujui" di bawah ini. Status akan otomatis berubah menjadi "In Progress".
+               Jika disetujui, status otomatis berubah menjadi "In Progress".
             </div>
          </div>
       ),
       confirmText: 'Ya, Setujui',
       confirmColor: '#16a34a',
       icon: 'check',
-      onConfirm: () => handleAdminApprove(lead)
+      onConfirm: () => handleAdminApprovalAction(lead, 'Approve')
+    });
+  };
+
+  const handleDeclineClick = (lead: DailyLog) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Decline Approval',
+      message: <>Tolak request approval untuk <b>{lead.leadName}</b>? Data akan dikembalikan ke Marketer.</>,
+      confirmText: 'Ya, Tolak',
+      confirmColor: '#ef4444',
+      icon: 'alert',
+      onConfirm: () => handleAdminApprovalAction(lead, 'Decline')
     });
   };
 
@@ -656,7 +699,7 @@ export default function App() {
          status: approvalModalLead.status,
          notes: approvalModalLead.notes,
          marketer: approvalModalLead.marketer,
-         email: approvalEmail,
+         email: approvalEmail, // Pass email baru
          approvalStatus: 'Pending'
       };
 
@@ -676,7 +719,7 @@ export default function App() {
     }
   };
 
-  const handleAdminApprove = async (lead: DailyLog) => {
+  const handleAdminApprovalAction = async (lead: DailyLog, actionType: 'Approve' | 'Decline') => {
     if (!isAdmin) return;
     setLoading(true);
     try {
@@ -691,11 +734,11 @@ export default function App() {
          interactionType: lead.interactionType,
          tagged: lead.tagged,
          responseTime: lead.responseTime,
-         status: 'In Progress', 
+         status: actionType === 'Approve' ? 'In Progress' : lead.status, 
          notes: lead.notes,
          marketer: lead.marketer,
          email: lead.email,
-         approvalStatus: 'Approved'
+         approvalStatus: actionType === 'Approve' ? 'Approved' : 'Declined'
       };
 
       await fetch(GAS_API_URL, {
@@ -704,10 +747,10 @@ export default function App() {
         body: JSON.stringify(payload)
       });
 
-      showNotification(`Approval sukses. Status ${lead.leadName} -> In Progress`, 'success');
+      showNotification(`${actionType} sukses untuk ${lead.leadName}.`, 'success');
       setTimeout(() => fetchData(), 1500);
     } catch(err) {
-      showNotification('Gagal menyetujui lead.', 'error');
+      showNotification(`Gagal memproses ${actionType}.`, 'error');
       setLoading(false);
     }
   };
@@ -739,7 +782,7 @@ export default function App() {
         isDark={isDark} styles={styles}
       />
 
-      {/* UNIVERSAL CONFIRM MODAL (Logout, Delete, Approve) */}
+      {/* UNIVERSAL CONFIRM MODAL (Logout, Delete, Approve/Decline) */}
       <ConfirmModal 
          isOpen={confirmDialog.isOpen} 
          onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} 
@@ -760,13 +803,13 @@ export default function App() {
             <button onClick={() => setApprovalModalLead(null)} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af'}}><X size={20}/></button>
          </div>
          <p style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '16px'}}>
-           Masukkan Email peserta untuk lead <b>{approvalModalLead?.leadName}</b>
+           Masukkan <b>Lead Email</b> untuk mendaftarkan <b>{approvalModalLead?.leadName}</b>
          </p>
          <form onSubmit={handleRequestApproval}>
             <input 
               type="email" required autoFocus
               value={approvalEmail} onChange={(e) => setApprovalEmail(e.target.value)}
-              placeholder="email@peserta.com"
+              placeholder="lead.email@example.com"
               style={{...styles.input, marginBottom: '20px'}} 
             />
             <button type="submit" style={{...styles.btnPrimary, width: '100%', justifyContent: 'center'}}>Kirim Request</button>
@@ -807,7 +850,7 @@ export default function App() {
         <div onClick={() => setActiveTab('influencer')} style={styles.tab(activeTab === 'influencer')}><CheckSquare size={16} /> Influencer Stats</div>
         <div onClick={() => setActiveTab('kpi')} style={styles.tab(activeTab === 'kpi')}><BarChart2 size={16} /> Dashboard KPI</div>
         
-        {/* Tab Spesial Admin Dashboard (Di kanan) */}
+        {/* Tab Spesial Admin Dashboard */}
         <div 
            onClick={handleTabAdminClick} 
            style={{...styles.tab(activeTab === 'admin'), marginLeft: 'auto', color: isAdmin ? '#16a34a' : (isDark?'#9ca3af':'#6b7280')}}
@@ -839,7 +882,7 @@ export default function App() {
                   {/* Judul Halaman dinamis */}
                   <div style={{width: '100%', marginBottom: '5px'}}>
                      <h2 style={{fontSize:'18px', margin:0, color: isDark?'white':'#333', fontWeight: 700}}>
-                        {activeTab === 'admin' ? 'Admin Dashboard - Kelola & Setujui Leads' : 'Daily Log - Semua Leads'}
+                        {activeTab === 'admin' ? 'Admin Dashboard - Kelola & Setujui Leads (Pending Only)' : 'Daily Log - Semua Leads'}
                      </h2>
                   </div>
 
@@ -861,28 +904,20 @@ export default function App() {
                      <input type="date" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', fontFamily: 'inherit'}} />
                   </div>
 
-                  {/* Marketer Dropdown */}
+                  {/* Searchable Marketer Dropdown (DATALIST) */}
                   <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
-                     <select value={marketerFilter} onChange={(e) => setMarketerFilter(e.target.value)} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', width: '120px', fontFamily: 'inherit'}}>
+                     <input 
+                        list="marketers-list"
+                        value={marketerFilter} 
+                        onChange={(e) => setMarketerFilter(e.target.value)} 
+                        placeholder="All Marketers (Ketik...)"
+                        style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', width: '150px', fontFamily: 'inherit'}}
+                     />
+                     <datalist id="marketers-list">
                         <option value="">All Marketers</option>
-                        {availableMarketers.map(m => <option key={m} value={m}>{m}</option>)}
-                     </select>
+                        {availableMarketers.map(m => <option key={m} value={m} />)}
+                     </datalist>
                   </div>
-
-                  {/* Total Row */}
-                  <div style={{fontSize: '13px', fontWeight: 600, color: isDark ? '#d1d5db' : '#4b5563', padding: '0 5px'}}>
-                    Total Row: {filteredLogs.length}
-                  </div>
-
-                  {/* Filter Khusus Tab Admin: Show Pending Only */}
-                  {activeTab === 'admin' && (
-                     <div style={{display:'flex', alignItems:'center', padding: '0 10px', backgroundColor: showPendingOnly ? (isDark ? '#422006' : '#fef3c7') : 'transparent', borderRadius: '8px', transition: 'all 0.2s'}}>
-                        <label style={{display:'flex', alignItems:'center', gap: '6px', cursor: 'pointer', fontSize:'13px', color: showPendingOnly ? (isDark ? '#fbbf24' : '#b45309') : (isDark ? '#d1d5db' : '#4b5563'), fontWeight: 600}}>
-                           <input type="checkbox" checked={showPendingOnly} onChange={(e) => setShowPendingOnly(e.target.checked)} style={{width: '16px', height: '16px'}} />
-                           Filter Pending Approval
-                        </label>
-                     </div>
-                  )}
 
                </div>
 
@@ -891,7 +926,6 @@ export default function App() {
                   <button onClick={handleExportCSV} style={{...styles.btnPrimary, backgroundColor: '#0284c7'}} title="Export ke Excel/CSV">
                     <Download size={16} /> <span style={{display: isMobile?'none':'inline'}}>Export</span>
                   </button>
-                  {/* Tombol New Lead tetap ada untuk memudahkan input */}
                   <button onClick={() => { setEditingLead(null); setIsModalOpen(true); }} style={styles.btnPrimary}>
                     <span>+</span> <span style={{display: isMobile?'none':'inline'}}>New Lead</span>
                   </button>
@@ -902,12 +936,12 @@ export default function App() {
                <table style={styles.table}>
                   <thead>
                     <tr>
-                      {/* Tampilkan kolom Action hanya di Tab Admin */}
+                      <th style={{...styles.th, textAlign: 'center'}}>No.</th>
                       {activeTab === 'admin' && <th style={styles.th}>⚙️ Actions</th>}
                       <th style={styles.th}>Date</th>
                       <th style={styles.th}>Lead Name</th>
                       <th style={styles.th}>Bukti GDrive</th> 
-                      <th style={styles.th}>Email</th>
+                      <th style={styles.th}>Lead Email</th>
                       <th style={styles.th}>Approval Status</th> 
                       <th style={styles.th}>Status</th>
                       <th style={styles.th}>Industry</th>
@@ -919,16 +953,20 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredLogs.length === 0 ? (
-                       <tr><td colSpan={13} style={{padding:'40px', textAlign:'center', color:'#6b7280'}}>Tidak ada data.</td></tr>
+                    {paginatedLogs.length === 0 ? (
+                       <tr><td colSpan={14} style={{padding:'40px', textAlign:'center', color:'#6b7280'}}>Tidak ada data.</td></tr>
                     ) : (
-                       filteredLogs.map(row => (
+                       paginatedLogs.map((row, index) => (
                          <tr key={row.id} style={{backgroundColor: isDark ? 'transparent' : 'white'}}>
-                           
-                           {/* Fitur Hapus/Edit HANYA MUNCUL DI TAB ADMIN */}
+                           <td style={{...styles.td, textAlign: 'center', color: '#9ca3af', fontSize: '12px'}}>
+                              {(currentPage - 1) * itemsPerPage + index + 1}
+                           </td>
+
                            {activeTab === 'admin' && (
                               <td style={styles.td}>
                                 <div style={{display:'flex', gap:'5px', alignItems: 'center'}}>
+                                  <button onClick={() => handleApproveClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#dcfce7', color: '#16a34a'}} title="Approve"><CheckSquare size={14} /></button>
+                                  <button onClick={() => handleDeclineClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444'}} title="Decline"><X size={14} /></button>
                                   <button onClick={() => {setEditingLead(row); setIsModalOpen(true);}} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#e0f2fe', color: '#0284c7'}} title="Edit"><Edit size={14} /></button>
                                   <button onClick={() => handleDeleteClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444'}} title="Delete"><Trash2 size={14} /></button>
                                 </div>
@@ -942,21 +980,20 @@ export default function App() {
                            
                            <td style={styles.td}>
                               {activeTab === 'admin' ? (
-                                 /* TAMPILAN KHUSUS ADMIN DASHBOARD */
-                                 row.status === 'New' ? (
-                                    <button onClick={() => handleApproveClick(row)} style={{fontSize:'11px', padding: '4px 8px', borderRadius:'6px', background: '#16a34a', color:'white', border:'none', cursor:'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px'}}>
-                                       <CheckSquare size={12}/> Approve
-                                    </button>
-                                 ) : <span style={{color:'#9ca3af', fontSize:'11px'}}>-</span>
+                                 <span style={{color: '#d97706', fontSize: '12px', fontWeight: 600}}>Pending Action</span>
                               ) : (
-                                 /* TAMPILAN DAILY LOG MARKETER BISA */
                                  row.status === 'New' ? (
                                     row.approvalStatus === 'Pending' ? (
                                        <span style={{color: '#d97706', fontSize: '12px', fontWeight: 600}}>Pending...</span>
+                                    ) : row.approvalStatus === 'Declined' ? (
+                                       <div style={{display:'flex', flexDirection: 'column', gap:'4px'}}>
+                                          <span style={{color: '#ef4444', fontSize: '12px', fontWeight: 700}}>Declined</span>
+                                          <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'10px', padding: '2px 6px', borderRadius:'4px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'black', border:isDark?'1px solid #4b5563':'1px solid #ddd', cursor:'pointer'}}>Req. Again</button>
+                                       </div>
                                     ) : (
                                        <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'11px', padding: '4px 8px', borderRadius:'6px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'black', border:isDark?'1px solid #4b5563':'1px solid #ddd', cursor:'pointer'}}>Req. Approval</button>
                                     )
-                                 ) : <span style={{color:'#9ca3af', fontSize:'11px'}}>-</span>
+                                 ) : <span style={{color:'#16a34a', fontSize:'11px', fontWeight: 600}}>Approved</span>
                               )}
                            </td>
 
@@ -979,10 +1016,30 @@ export default function App() {
                   </tbody>
                </table>
             </div>
+            
+            {/* PAGINATION CONTROLS */}
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px', flexWrap: 'wrap', gap: '10px'}}>
+               <div style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280'}}>
+                  Showing 
+                  <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} style={{margin: '0 8px', padding: '4px', borderRadius: '4px', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', background: isDark?'#374151':'white', color: isDark?'white':'black'}}>
+                     <option value={25}>25</option>
+                     <option value={50}>50</option>
+                     <option value={75}>75</option>
+                     <option value={100}>100</option>
+                  </select> 
+                  rows per page (Total: {filteredLogs.length})
+               </div>
+               <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                  <button disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)} style={{padding: '6px 12px', borderRadius: '6px', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', background: currentPage===1 ? 'transparent' : (isDark?'#374151':'white'), color: currentPage===1 ? '#9ca3af' : (isDark?'white':'black'), cursor: currentPage===1 ? 'not-allowed' : 'pointer'}}>Prev</button>
+                  <span style={{fontSize: '13px', margin: '0 5px'}}>Page {currentPage} of {totalPages || 1}</span>
+                  <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(c => c + 1)} style={{padding: '6px 12px', borderRadius: '6px', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', background: (currentPage === totalPages || totalPages === 0) ? 'transparent' : (isDark?'#374151':'white'), color: (currentPage === totalPages || totalPages === 0) ? '#9ca3af' : (isDark?'white':'black'), cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer'}}>Next</button>
+               </div>
+            </div>
+
           </div>
         )}
 
-        {/* Jika User bypass dan memaksa masuk Admin Panel tanpa Login */}
+        {/* Jika User bypass Admin Panel tanpa Login */}
         {activeTab === 'admin' && !isAdmin && (
            <div style={{textAlign: 'center', padding: '60px 20px'}}>
               <Lock size={64} color="#ef4444" style={{margin: '0 auto 20px auto'}} />
@@ -995,11 +1052,15 @@ export default function App() {
         {/* --- TAB 2: MARKETERS PAGE --- */}
         {activeTab === 'marketers' && (
            <div>
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
-                 <h2 style={{fontSize:'18px', margin:0, color: isDark?'white':'#333', fontWeight: 700}}>Marketers Performance (Filtered Date)</h2>
-                 <div style={{display:'flex', gap:'10px'}}>
-                    <input type="date" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} style={{...styles.input, padding:'6px', width:'130px'}} title="Start Date"/>
-                    <input type="date" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} style={{...styles.input, padding:'6px', width:'130px'}} title="End Date"/>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px'}}>
+                 <h2 style={{fontSize:'18px', margin:0, color: isDark?'white':'#333', fontWeight: 700}}>Marketers Performance</h2>
+                 <div style={{display:'flex', gap:'10px', flexWrap: 'wrap'}}>
+                    <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px'}}>
+                       <SearchIcon size={16} color="#9ca3af"/>
+                       <input placeholder="Cari Marketer..." value={marketerSearchQuery} onChange={(e) => setMarketerSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'8px', outline:'none', color: isDark?'white':'black', width:'130px', fontSize: '13px'}} />
+                    </div>
+                    <input type="date" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} style={{...styles.input, padding:'8px', width:'130px'}} title="Start Date"/>
+                    <input type="date" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} style={{...styles.input, padding:'8px', width:'130px'}} title="End Date"/>
                  </div>
               </div>
               
@@ -1008,10 +1069,12 @@ export default function App() {
                    <thead>
                      <tr>
                        <th style={styles.th}>Marketer Name</th>
-                       <th style={styles.th}>Total Leads (di Range Ini)</th>
+                       <th style={styles.th}>Total Leads</th>
                        <th style={styles.th}>Direct Asks</th>
                        <th style={styles.th}>Deals / Signed</th>
                        <th style={styles.th}>Conversion Rate</th>
+                       <th style={styles.th}>Status</th>
+                       <th style={styles.th}>Last Update</th>
                      </tr>
                    </thead>
                    <tbody>
@@ -1022,10 +1085,16 @@ export default function App() {
                          <td style={styles.td}>{m.directAsks}</td>
                          <td style={styles.td}>{m.deals}</td>
                          <td style={{...styles.td, color: '#d97706', fontWeight: 700}}>{m.conversionRate}%</td>
+                         <td style={styles.td}>
+                            <span style={{padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, backgroundColor: m.status === 'Active' ? '#dcfce7' : '#fee2e2', color: m.status === 'Active' ? '#16a34a' : '#ef4444'}}>
+                               {m.status}
+                            </span>
+                         </td>
+                         <td style={{...styles.td, fontSize: '12px', color: '#6b7280'}}>{m.lastUpdate || '-'}</td>
                        </tr>
                      ))}
                      {marketersStatsList.length === 0 && (
-                        <tr><td colSpan={5} style={{padding:'40px', textAlign:'center', color:'#6b7280'}}>Belum ada data marketer.</td></tr>
+                        <tr><td colSpan={7} style={{padding:'40px', textAlign:'center', color:'#6b7280'}}>Belum ada data marketer.</td></tr>
                      )}
                    </tbody>
                 </table>
@@ -1069,8 +1138,11 @@ export default function App() {
         {/* --- TAB 4: KPI DASHBOARD --- */}
         {activeTab === 'kpi' && (
            <div style={{display:'grid', gridTemplateColumns: isMobile?'1fr':'repeat(4, 1fr)', gap:'20px'}}>
+              <div style={{gridColumn: '1 / -1', background: isDark?'#374151':'#f3f4f6', padding: '12px', borderRadius: '8px', fontSize: '13px', color: isDark?'#d1d5db':'#4b5563'}}>
+                 Data KPI dihitung secara otomatis berdasarkan filter <b>Date Range</b> dan <b>Marketer</b> yang Anda pilih di menu utama.
+              </div>
               <div style={styles.card}>
-                 <div style={{fontSize:'12px', textTransform:'uppercase', color:'#6b7280', fontWeight: 600, letterSpacing: '0.5px'}}>Total Leads (All Time)</div>
+                 <div style={{fontSize:'12px', textTransform:'uppercase', color:'#6b7280', fontWeight: 600, letterSpacing: '0.5px'}}>Total Leads</div>
                  <div style={{fontSize:'36px', fontWeight:800, color: isDark?'white':'#1f2937', marginTop: '8px'}}>{globalKpiStats.totalLeads}</div>
               </div>
               <div style={styles.card}>
@@ -1083,7 +1155,7 @@ export default function App() {
               </div>
               <div style={styles.card}>
                  <div style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize:'12px', textTransform:'uppercase', color:'#d97706', fontWeight: 600, letterSpacing: '0.5px'}}>
-                    <TrendingUp size={16} /> Global Conversion Rate
+                    <TrendingUp size={16} /> Conversion Rate
                  </div>
                  <div style={{fontSize:'36px', fontWeight:800, color: '#d97706', marginTop: '8px'}}>{conversionRate}%</div>
               </div>
@@ -1146,14 +1218,13 @@ const PinModal = ({ isOpen, onClose, onSubmit, isDark, styles }: any) => {
 function AddLeadForm({ styles, initialData, onSubmit }: { styles: any, initialData: DailyLog | null, onSubmit: (data: any) => void }) {
   const [formData, setFormData] = useState({
     rowNumber: 0, 
-    rawDateIso: new Date().toISOString().slice(0, 10), // Default Hari Ini
+    rawDateIso: new Date().toISOString().slice(0, 10), 
     name: '', url: '', industry: 'IT/Tech', source: '', 
     template: 'ATS Story', interactionType: 'Direct Ask', 
     tagged: true, notes: '', marketer: '', status: 'New', responseTime: '-',
     email: '', approvalStatus: 'None'
   });
 
-  // Fitur Marketer LocalStorage
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -1166,7 +1237,6 @@ function AddLeadForm({ styles, initialData, onSubmit }: { styles: any, initialDa
         email: initialData.email, approvalStatus: initialData.approvalStatus
       });
     } else {
-      // Load marketer from localStorage on new form
       const savedMarketer = localStorage.getItem('savedMarketerName');
       if (savedMarketer) {
          setFormData(prev => ({ ...prev, marketer: savedMarketer }));
@@ -1241,10 +1311,9 @@ function AddLeadForm({ styles, initialData, onSubmit }: { styles: any, initialDa
          )}
        </div>
 
-       {/* Fitur Edit Email Khusus Admin (Bila Ada Typo) */}
        {initialData && (
           <div>
-            <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Email Lead</label>
+            <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Lead Email</label>
             <input type="email" name="email" value={formData.email} onChange={handleChange} style={styles.input} placeholder="Belum ada email dari marketer" />
           </div>
        )}
