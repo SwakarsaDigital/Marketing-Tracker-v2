@@ -319,8 +319,21 @@ export default function App() {
       const dataLogs = await resLogs.json();
       
       if(dataLogs.status === 'success') {
+        // PERBAIKAN FATAL: Menghitung letak baris yang absolut dan tahan geser
+        let offset = 1;
+        if (dataLogs.data && dataLogs.data.length > 0) {
+          const firstRow = dataLogs.data[0];
+          const firstVal = Array.isArray(firstRow) ? firstRow[0] : firstRow["Date of Contact"];
+          if (String(firstVal).toLowerCase().includes('date')) {
+            offset = 1; // Jika index 0 adalah header, data mulai dari row 2 (1+1)
+          } else {
+            offset = 2; // Jika index 0 sudah murni data, data mulai dari row 2 (0+2)
+          }
+        }
+
         const mappedLogs = dataLogs.data
-        .filter((row: any) => {
+        .map((row: any, originalIndex: number) => ({ row, originalIndex }))
+        .filter(({row}: any) => {
              const firstVal = Array.isArray(row) ? row[0] : row["Date of Contact"];
              if (!firstVal) return false;
              const str = String(firstVal).toLowerCase().trim();
@@ -328,7 +341,7 @@ export default function App() {
              if (!/\d/.test(str)) return false;
              return true;
         })
-        .map((row: any, idx: number) => {
+        .map(({row, originalIndex}: any, idx: number) => {
           const isArray = Array.isArray(row);
           const values = isArray ? row : Object.values(row);
           
@@ -346,8 +359,8 @@ export default function App() {
                const d = new Date(rawDate);
                if (!isNaN(d.getTime())) {
                    dateStr = d.toLocaleDateString('en-US');
-                   const offset = d.getTimezoneOffset() * 60000;
-                   const localISOTime = (new Date(d.getTime() - offset)).toISOString().slice(0, 10);
+                   const tzOffset = d.getTimezoneOffset() * 60000;
+                   const localISOTime = (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 10);
                    rawDateIso = localISOTime;
                } else {
                    dateStr = String(rawDate);
@@ -361,7 +374,7 @@ export default function App() {
 
           return {
             id: idx,
-            rowNumber: idx + 2,
+            rowNumber: originalIndex + offset, // Ini menjamin baris sinkron dengan Spreadsheet
             date: dateStr,
             rawDateIso: rawDateIso,
             leadName: getValue("Lead Name", 1) || '-',
@@ -406,14 +419,12 @@ export default function App() {
       const matchName = log.leadName.toLowerCase().includes(searchQuery.toLowerCase());
       const matchMarketer = marketerFilter ? log.marketer === marketerFilter : true;
       
-      // Admin Dashboard HANYA menampilkan yang Pending
       const matchPending = activeTab === 'admin' ? log.approvalStatus === 'Pending' : true; 
 
       return matchDate && matchName && matchMarketer && matchPending;
     });
   }, [dailyLogs, searchQuery, dateRange, marketerFilter, activeTab]);
 
-  // Dropdown Marketer Dinamis (Hanya yg punya data di rentang waktu terpilih)
   const availableMarketers = useMemo(() => {
     const activeInDateRange = dailyLogs.filter(log => {
       let matchDate = true;
@@ -432,14 +443,12 @@ export default function App() {
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Reset page ke 1 kalau filter berubah
   useEffect(() => {
      setCurrentPage(1);
   }, [searchQuery, dateRange, marketerFilter, activeTab, itemsPerPage]);
 
   // --- DYNAMIC KPIs ---
   const globalKpiStats = useMemo(() => {
-    // KPI HANYA MENGHITUNG DARI LOG YANG TERFILTER (berdasarkan Tanggal & Marketer)
     const kpiLogs = dailyLogs.filter(log => {
        let matchDate = true;
        if (dateRange.start || dateRange.end) {
@@ -454,13 +463,11 @@ export default function App() {
     let totalLeads = kpiLogs.length;
     let directAskCount = 0;
     let conversionCount = 0;
-    
     const sourceMap: Record<string, number> = {};
 
     kpiLogs.forEach(log => {
       if (log.interactionType === 'Direct Ask') directAskCount++;
       if (log.status === 'Deal/Signed') conversionCount++;
-      
       const src = log.source || 'Unknown';
       sourceMap[src] = (sourceMap[src] || 0) + 1;
     });
@@ -492,8 +499,6 @@ export default function App() {
        if (!stats[mName]) {
           stats[mName] = { name: mName, totalLeads: 0, deals: 0, directAsks: 0, lastUpdate: log.rawDateIso };
        }
-
-       // Track Last Update dari semua log marketer tersebut
        if (log.rawDateIso > stats[mName].lastUpdate) {
            stats[mName].lastUpdate = log.rawDateIso;
        }
@@ -514,10 +519,10 @@ export default function App() {
 
     return Object.values(stats).map(m => ({
        ...m,
-       status: m.totalLeads > 0 ? 'Active' : 'Non-active', // Aktif jika punya lead di rentang waktu
+       status: m.totalLeads > 0 ? 'Active' : 'Non-active',
        conversionRate: m.totalLeads > 0 ? ((m.deals / m.totalLeads) * 100).toFixed(1) : '0.0'
     }))
-    .filter(m => m.name.toLowerCase().includes(marketerSearchQuery.toLowerCase())) // Search filter
+    .filter(m => m.name.toLowerCase().includes(marketerSearchQuery.toLowerCase()))
     .sort((a, b) => b.totalLeads - a.totalLeads);
   }, [dailyLogs, dateRange, marketerSearchQuery]);
 
@@ -557,46 +562,35 @@ export default function App() {
 
 
   // --- CRUD ACTIONS (Google Apps Script) ---
-  const handleFormSubmit = (data: any) => {
-    setIsModalOpen(false); 
-    if (editingLead) {
-      performAction('edit', data);
-    } else {
-      performAction('create', data);
-    }
-  };
-
-  const performAction = async (action: 'create' | 'edit' | 'delete', data: any) => {
-    setLoading(true);
-    setIsModalOpen(false); 
-    
+  const performActionSilently = async (actionType: 'create' | 'edit' | 'delete', data: any, successMsg: string) => {
     try {
       const payload = {
-        action: action,
+        action: actionType,
         ...data,
         rowNumber: data.rowNumber 
       };
 
       await fetch(GAS_API_URL, {
         method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Format paling aman untuk GAS
         body: JSON.stringify(payload)
       });
 
-      if (action === 'edit') {
-        showNotification('Edit terkonfirmasi. Data berhasil diperbarui.', 'success');
-      } else if (action === 'delete') {
-        showNotification('Data berhasil dihapus dari sistem.', 'success');
-      } else {
-        showNotification('Data baru berhasil ditambahkan.', 'success');
-      }
-      
-      setTimeout(() => fetchData(true), 1500);
+      showNotification(successMsg, 'success');
+      setTimeout(() => fetchData(false), 2500);
     } catch (error) {
-      showNotification('Gagal melakukan aksi.', 'error');
-      setLoading(false);
-    } finally {
+      showNotification('Gagal melakukan aksi sinkronisasi ke server.', 'error');
+      fetchData(false); // Revert UI
+    }
+  };
+
+  const handleFormSubmit = (data: any) => {
+    setIsModalOpen(false); 
+    if (editingLead) {
+      performActionSilently('edit', data, 'Edit terkonfirmasi. Data berhasil diperbarui.');
       setEditingLead(null);
+    } else {
+      performActionSilently('create', data, 'Data baru berhasil ditambahkan.');
     }
   };
 
@@ -640,7 +634,7 @@ export default function App() {
       confirmText: 'Ya, Hapus',
       confirmColor: '#ef4444',
       icon: 'alert',
-      onConfirm: () => performAction('delete', lead)
+      onConfirm: () => performActionSilently('delete', lead, 'Data berhasil dihapus dari sistem.')
     });
   };
 
@@ -682,55 +676,36 @@ export default function App() {
     e.preventDefault();
     if (!approvalModalLead || !approvalEmail) return;
     
-    // --- OPTIMISTIC UPDATE ---
-    // Update data lokal secara instan agar UI tidak "menunggu" 
     const leadToUpdate = approvalModalLead;
     const emailToUpdate = approvalEmail;
 
+    // --- OPTIMISTIC UPDATE INSTAN ---
     setDailyLogs(prevLogs => prevLogs.map(log => 
-       log.id === leadToUpdate.id 
-         ? { ...log, email: emailToUpdate, approvalStatus: 'Pending' }
-         : log
+       log.id === leadToUpdate.id ? { ...log, email: emailToUpdate, approvalStatus: 'Pending' } : log
     ));
 
     setApprovalModalLead(null);
     setApprovalEmail('');
 
-    try {
-      const payload = {
-         action: 'edit',
-         rowNumber: leadToUpdate.rowNumber,
-         rawDateIso: leadToUpdate.rawDateIso, // PENTING: Mencegah error di backend
-         name: leadToUpdate.leadName,
-         url: leadToUpdate.profileUrl,
-         industry: leadToUpdate.industry,
-         source: leadToUpdate.source,
-         template: leadToUpdate.template,
-         interactionType: leadToUpdate.interactionType,
-         tagged: leadToUpdate.tagged,
-         responseTime: leadToUpdate.responseTime,
-         status: leadToUpdate.status,
-         notes: leadToUpdate.notes,
-         marketer: leadToUpdate.marketer,
-         email: emailToUpdate,
-         approvalStatus: 'Pending'
-      };
+    const dataToUpdate = {
+       rowNumber: leadToUpdate.rowNumber,
+       rawDateIso: leadToUpdate.rawDateIso, 
+       name: leadToUpdate.leadName,
+       url: leadToUpdate.profileUrl,
+       industry: leadToUpdate.industry,
+       source: leadToUpdate.source,
+       template: leadToUpdate.template,
+       interactionType: leadToUpdate.interactionType,
+       tagged: leadToUpdate.tagged,
+       responseTime: leadToUpdate.responseTime,
+       status: leadToUpdate.status,
+       notes: leadToUpdate.notes,
+       marketer: leadToUpdate.marketer,
+       email: emailToUpdate,
+       approvalStatus: 'Pending'
+    };
 
-      await fetch(GAS_API_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      showNotification(`Request Approval dikirim untuk ${leadToUpdate.leadName}`, 'success');
-      
-      // Lakukan fetch ulang di background tanpa layar loading untuk sinkronisasi
-      setTimeout(() => fetchData(false), 2000);
-    } catch (err) {
-      showNotification('Gagal mengirim request approval.', 'error');
-      // Jika gagal, revert data dengan fetch ulang
-      fetchData(false);
-    }
+    await performActionSilently('edit', dataToUpdate, `Request Approval dikirim untuk ${leadToUpdate.leadName}`);
   };
 
   const handleAdminApprovalAction = async (lead: DailyLog, actionType: 'Approve' | 'Decline') => {
@@ -739,45 +714,30 @@ export default function App() {
     const newApprovalStatus = actionType === 'Approve' ? 'Approved' : 'Declined';
     const newStatus = actionType === 'Approve' ? 'In Progress' : lead.status;
 
-    // --- OPTIMISTIC UPDATE ---
+    // --- OPTIMISTIC UPDATE INSTAN ---
     setDailyLogs(prevLogs => prevLogs.map(l => 
-       l.id === lead.id 
-         ? { ...l, approvalStatus: newApprovalStatus, status: newStatus }
-         : l
+       l.id === lead.id ? { ...l, approvalStatus: newApprovalStatus, status: newStatus } : l
     ));
 
-    try {
-      const payload = {
-         action: 'edit',
-         rowNumber: lead.rowNumber,
-         rawDateIso: lead.rawDateIso, // PENTING: Mencegah error di backend
-         name: lead.leadName,
-         url: lead.profileUrl,
-         industry: lead.industry,
-         source: lead.source,
-         template: lead.template,
-         interactionType: lead.interactionType,
-         tagged: lead.tagged,
-         responseTime: lead.responseTime,
-         status: newStatus,
-         notes: lead.notes,
-         marketer: lead.marketer,
-         email: lead.email,
-         approvalStatus: newApprovalStatus
-      };
+    const dataToUpdate = {
+       rowNumber: lead.rowNumber,
+       rawDateIso: lead.rawDateIso, 
+       name: lead.leadName,
+       url: lead.profileUrl,
+       industry: lead.industry,
+       source: lead.source,
+       template: lead.template,
+       interactionType: lead.interactionType,
+       tagged: lead.tagged,
+       responseTime: lead.responseTime,
+       status: newStatus,
+       notes: lead.notes,
+       marketer: lead.marketer,
+       email: lead.email,
+       approvalStatus: newApprovalStatus
+    };
 
-      await fetch(GAS_API_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      showNotification(`${actionType} sukses untuk ${lead.leadName}.`, 'success');
-      setTimeout(() => fetchData(false), 2000);
-    } catch(err) {
-      showNotification(`Gagal memproses ${actionType}.`, 'error');
-      fetchData(false); // Kembalikan ke semula jika gagal
-    }
+    await performActionSilently('edit', dataToUpdate, `${actionType} sukses untuk ${lead.leadName}.`);
   };
 
 
