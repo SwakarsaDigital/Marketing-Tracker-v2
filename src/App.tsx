@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 
 // --- CONFIGURATION ---
 // URL Google Apps Script Anda
@@ -309,8 +309,8 @@ export default function App() {
   }, []);
 
   // --- FETCH FROM GOOGLE SHEETS API ---
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const timestamp = new Date().getTime();
       const apiUrl = `${GAS_API_URL}?t=${timestamp}`;
@@ -384,14 +384,14 @@ export default function App() {
       }
     } catch (error) {
       console.error("Error fetching data:", error);
-      showNotification("Koneksi gagal. Cek konsol.", 'error');
+      if (showLoader) showNotification("Koneksi gagal. Cek konsol.", 'error');
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, []);
 
   // --- FILTER LOGIC ---
@@ -591,7 +591,7 @@ export default function App() {
         showNotification('Data baru berhasil ditambahkan.', 'success');
       }
       
-      setTimeout(() => fetchData(), 1500);
+      setTimeout(() => fetchData(true), 1500);
     } catch (error) {
       showNotification('Gagal melakukan aksi.', 'error');
       setLoading(false);
@@ -682,24 +682,37 @@ export default function App() {
     e.preventDefault();
     if (!approvalModalLead || !approvalEmail) return;
     
-    setLoading(true);
+    // --- OPTIMISTIC UPDATE ---
+    // Update data lokal secara instan agar UI tidak "menunggu" 
+    const leadToUpdate = approvalModalLead;
+    const emailToUpdate = approvalEmail;
+
+    setDailyLogs(prevLogs => prevLogs.map(log => 
+       log.id === leadToUpdate.id 
+         ? { ...log, email: emailToUpdate, approvalStatus: 'Pending' }
+         : log
+    ));
+
     setApprovalModalLead(null);
+    setApprovalEmail('');
+
     try {
       const payload = {
          action: 'edit',
-         rowNumber: approvalModalLead.rowNumber,
-         name: approvalModalLead.leadName,
-         url: approvalModalLead.profileUrl,
-         industry: approvalModalLead.industry,
-         source: approvalModalLead.source,
-         template: approvalModalLead.template,
-         interactionType: approvalModalLead.interactionType,
-         tagged: approvalModalLead.tagged,
-         responseTime: approvalModalLead.responseTime,
-         status: approvalModalLead.status,
-         notes: approvalModalLead.notes,
-         marketer: approvalModalLead.marketer,
-         email: approvalEmail, // Pass email baru
+         rowNumber: leadToUpdate.rowNumber,
+         rawDateIso: leadToUpdate.rawDateIso, // PENTING: Mencegah error di backend
+         name: leadToUpdate.leadName,
+         url: leadToUpdate.profileUrl,
+         industry: leadToUpdate.industry,
+         source: leadToUpdate.source,
+         template: leadToUpdate.template,
+         interactionType: leadToUpdate.interactionType,
+         tagged: leadToUpdate.tagged,
+         responseTime: leadToUpdate.responseTime,
+         status: leadToUpdate.status,
+         notes: leadToUpdate.notes,
+         marketer: leadToUpdate.marketer,
+         email: emailToUpdate,
          approvalStatus: 'Pending'
       };
 
@@ -709,23 +722,35 @@ export default function App() {
         body: JSON.stringify(payload)
       });
 
-      showNotification(`Request Approval dikirim untuk ${approvalModalLead.leadName}`, 'success');
-      setTimeout(() => fetchData(), 1500);
+      showNotification(`Request Approval dikirim untuk ${leadToUpdate.leadName}`, 'success');
+      
+      // Lakukan fetch ulang di background tanpa layar loading untuk sinkronisasi
+      setTimeout(() => fetchData(false), 2000);
     } catch (err) {
       showNotification('Gagal mengirim request approval.', 'error');
-      setLoading(false);
-    } finally {
-      setApprovalEmail('');
+      // Jika gagal, revert data dengan fetch ulang
+      fetchData(false);
     }
   };
 
   const handleAdminApprovalAction = async (lead: DailyLog, actionType: 'Approve' | 'Decline') => {
     if (!isAdmin) return;
-    setLoading(true);
+
+    const newApprovalStatus = actionType === 'Approve' ? 'Approved' : 'Declined';
+    const newStatus = actionType === 'Approve' ? 'In Progress' : lead.status;
+
+    // --- OPTIMISTIC UPDATE ---
+    setDailyLogs(prevLogs => prevLogs.map(l => 
+       l.id === lead.id 
+         ? { ...l, approvalStatus: newApprovalStatus, status: newStatus }
+         : l
+    ));
+
     try {
       const payload = {
          action: 'edit',
          rowNumber: lead.rowNumber,
+         rawDateIso: lead.rawDateIso, // PENTING: Mencegah error di backend
          name: lead.leadName,
          url: lead.profileUrl,
          industry: lead.industry,
@@ -734,11 +759,11 @@ export default function App() {
          interactionType: lead.interactionType,
          tagged: lead.tagged,
          responseTime: lead.responseTime,
-         status: actionType === 'Approve' ? 'In Progress' : lead.status, 
+         status: newStatus,
          notes: lead.notes,
          marketer: lead.marketer,
          email: lead.email,
-         approvalStatus: actionType === 'Approve' ? 'Approved' : 'Declined'
+         approvalStatus: newApprovalStatus
       };
 
       await fetch(GAS_API_URL, {
@@ -748,10 +773,10 @@ export default function App() {
       });
 
       showNotification(`${actionType} sukses untuk ${lead.leadName}.`, 'success');
-      setTimeout(() => fetchData(), 1500);
+      setTimeout(() => fetchData(false), 2000);
     } catch(err) {
       showNotification(`Gagal memproses ${actionType}.`, 'error');
-      setLoading(false);
+      fetchData(false); // Kembalikan ke semula jika gagal
     }
   };
 
@@ -803,7 +828,7 @@ export default function App() {
             <button onClick={() => setApprovalModalLead(null)} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af'}}><X size={20}/></button>
          </div>
          <p style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '16px'}}>
-           Masukkan <b>Lead Email</b> untuk mendaftarkan <b>{approvalModalLead?.leadName}</b>
+            Masukkan <b>Lead Email</b> untuk mendaftarkan <b>{approvalModalLead?.leadName}</b>
          </p>
          <form onSubmit={handleRequestApproval}>
             <input 
@@ -834,7 +859,7 @@ export default function App() {
           <button onClick={() => isAdmin ? handleLogoutClick() : setIsLoginModalOpen(true)} style={{background: isAdmin ? '#ef4444' : '#3b82f6', border:'none', color:'white', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor: 'pointer', fontWeight: 600}}>
              {isAdmin ? 'Keluar Admin' : 'Masuk Admin'}
           </button>
-          <button onClick={fetchData} style={{background:'none', border:'none', color:'white', cursor:'pointer', opacity: 0.8}} title="Refresh Data">
+          <button onClick={() => fetchData(true)} style={{background:'none', border:'none', color:'white', cursor:'pointer', opacity: 0.8}} title="Refresh Data">
             <RefreshCw size={20} />
           </button>
           <button onClick={() => setIsDark(!isDark)} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor: 'pointer', fontWeight: 500}}>
