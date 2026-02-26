@@ -9,10 +9,9 @@ import {
 } from './components/icons/icons';
 import { FullScreenLoader } from './components/ui/FullScreenLoader';
 import { AnimatedModal } from './components/ui/AnimatedModal';
-import { NotificationToast, NotificationState } from './components/ui/NotificationToast';
+import { NotificationToast } from './components/ui/NotificationToast';
 import { ConfirmModal } from './components/ui/ConfirmModal';
 import { SearchableDropdown } from './components/ui/SearchableDropdown';
-import { AddLeadForm } from './components/forms/AddLeadForm';
 
 // --- CONFIGURATION ---
 // URL Google Apps Script Anda
@@ -38,6 +37,11 @@ export interface DailyLog {
   marketer: string;
   email: string;
   approvalStatus: 'None' | 'Pending' | 'Approved' | 'Declined';
+}
+
+export interface NotificationState {
+  message: string;
+  type: 'success' | 'error' | 'info';
 }
 
 // --- MAIN APP COMPONENT ---
@@ -233,7 +237,33 @@ export default function App() {
      setCurrentPage(1);
   }, [searchQuery, dateRange, marketerFilter, activeTab, itemsPerPage]);
 
-  // --- DYNAMIC KPIs ---
+  // --- DYNAMIC KPIs (Admin Dashboard - PDF Point #2) ---
+  const adminKpiStats = useMemo(() => {
+    let total = 0, pending = 0, approved = 0, declined = 0;
+    dailyLogs.forEach(log => {
+      // 1. Apply Filters
+      let matchDate = true;
+      if (dateRange.start || dateRange.end) {
+         const logDate = new Date(log.rawDateIso);
+         if (dateRange.start) matchDate = matchDate && logDate >= new Date(dateRange.start);
+         if (dateRange.end) matchDate = matchDate && logDate <= new Date(dateRange.end);
+      }
+      const matchMarketer = marketerFilter ? log.marketer === marketerFilter : true;
+      const matchName = log.leadName.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // 2. Count if it matches the current filters
+      if (matchDate && matchMarketer && matchName) {
+         total++;
+         if (log.approvalStatus === 'Pending') pending++;
+         else if (log.approvalStatus === 'Approved') approved++;
+         else if (log.approvalStatus === 'Declined') declined++;
+      }
+    });
+    return { total, pending, approved, declined };
+  }, [dailyLogs, dateRange, marketerFilter, searchQuery]);
+
+
+  // --- GLOBAL KPIs (Dashboard KPI Tab) ---
   const globalKpiStats = useMemo(() => {
     const kpiLogs = dailyLogs.filter(log => {
        let matchDate = true;
@@ -377,10 +407,10 @@ export default function App() {
   const handleFormSubmit = (data: any) => {
     setIsModalOpen(false); 
     if (editingLead) {
-      performActionSilently('edit', data, 'Edit terkonfirmasi. Data berhasil diperbarui.');
+      performActionSilently('edit', { ...data, rowNumber: editingLead.rowNumber }, 'Edit terkonfirmasi. Data berhasil diperbarui.');
       setEditingLead(null);
     } else {
-      performActionSilently('create', data, 'Data baru berhasil ditambahkan.');
+      performActionSilently('create', { ...data, approvalStatus: 'Pending' }, 'Data baru berhasil ditambahkan.');
     }
   };
 
@@ -577,6 +607,32 @@ export default function App() {
          styles={styles} 
       />
 
+      {/* --- ADD / EDIT LEAD MODAL INLINE (Penyelesaian Crash) --- */}
+      <AnimatedModal 
+        isOpen={isModalOpen} 
+        onClose={() => { setIsModalOpen(false); setEditingLead(null); }} 
+        title={editingLead ? 'Edit Lead' : 'New Lead'}
+        styles={styles} 
+        contentStyle={{ width: '600px', maxWidth: '95vw' }}
+      >
+         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'16px'}}>
+            <h3 style={{margin:0, color: isDark?'white':'#1f2937', fontSize: '18px'}}>
+              {editingLead ? 'Edit Lead' : 'New Lead'}
+            </h3>
+            <button onClick={() => { setIsModalOpen(false); setEditingLead(null); }} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af'}}>
+              <X size={20}/>
+            </button>
+         </div>
+         {/* Form Custom Inline yang formatnya sesuai dengan data Google Apps Script (Mencegah Layar Hitam) */}
+         <InlineAddEditForm 
+            initialData={editingLead}
+            onSubmit={handleFormSubmit}
+            onCancel={() => { setIsModalOpen(false); setEditingLead(null); }}
+            isDark={isDark}
+            styles={styles}
+         />
+      </AnimatedModal>
+
       {/* REQUEST APPROVAL MODAL */}
       <AnimatedModal isOpen={!!approvalModalLead} onClose={() => setApprovalModalLead(null)} styles={styles} contentStyle={{ width: '380px' }}>
          <div style={{display:'flex', justifyContent:'space-between', marginBottom:'16px'}}>
@@ -743,6 +799,28 @@ export default function App() {
                   </button>
                </div>
             </div>
+
+            {/* --- ADMIN DASHBOARD KPIs (PDF Nomor 2) --- */}
+            {activeTab === 'admin' && (
+              <div style={{display:'grid', gridTemplateColumns: isMobile?'1fr 1fr':'repeat(4, 1fr)', gap:'15px', marginBottom: '20px'}}>
+                 <div style={{...styles.card, padding: '15px'}}>
+                    <div style={{fontSize:'12px', color:'#6b7280', fontWeight: 600}}>Total Filtered Leads</div>
+                    <div style={{fontSize:'24px', fontWeight:800, color: isDark?'white':'#1f2937'}}>{adminKpiStats.total}</div>
+                 </div>
+                 <div style={{...styles.card, padding: '15px'}}>
+                    <div style={{fontSize:'12px', color:'#d97706', fontWeight: 600}}>Pending Approval</div>
+                    <div style={{fontSize:'24px', fontWeight:800, color: '#d97706'}}>{adminKpiStats.pending}</div>
+                 </div>
+                 <div style={{...styles.card, padding: '15px'}}>
+                    <div style={{fontSize:'12px', color:'#16a34a', fontWeight: 600}}>Approved</div>
+                    <div style={{fontSize:'24px', fontWeight:800, color: '#16a34a'}}>{adminKpiStats.approved}</div>
+                 </div>
+                 <div style={{...styles.card, padding: '15px'}}>
+                    <div style={{fontSize:'12px', color:'#ef4444', fontWeight: 600}}>Declined</div>
+                    <div style={{fontSize:'24px', fontWeight:800, color: '#ef4444'}}>{adminKpiStats.declined}</div>
+                 </div>
+              </div>
+            )}
 
             {/* TABEL DATA RESPONSIVE */}
             <div style={{overflowX: 'auto', border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: '12px'}}>
@@ -999,8 +1077,125 @@ export default function App() {
   );
 }
 
+// --- KOMPONEN INLINE BARU: MENGGANTIKAN AddLeadForm.tsx YANG BENTROK ---
+const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: any) => {
+  const [formData, setFormData] = useState<any>({});
+
+  // Reset form setiap kali dipanggil (terutama saat berpindah antar Edit baris yang berbeda)
+  useEffect(() => {
+    setFormData({
+      rawDateIso: initialData?.rawDateIso || new Date().toISOString().split('T')[0],
+      name: initialData?.leadName || '',
+      url: initialData?.profileUrl || '',
+      email: initialData?.email || '',
+      industry: initialData?.industry || '',
+      source: initialData?.source || '',
+      template: initialData?.template || '',
+      interactionType: initialData?.interactionType || '',
+      tagged: initialData?.tagged || false,
+      responseTime: initialData?.responseTime || '',
+      status: initialData?.status || 'New',
+      notes: initialData?.notes || '',
+      marketer: initialData?.marketer || '',
+      approvalStatus: initialData?.approvalStatus || 'None'
+    });
+  }, [initialData]);
+
+  const handleChange = (e: any) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev: any) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSubmit = (e: any) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+        <div>
+          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Tanggal Kontak</label>
+          <input type="date" name="rawDateIso" value={formData.rawDateIso || ''} onChange={handleChange} required style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+        </div>
+        <div>
+          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Lead Name</label>
+          <input type="text" name="name" value={formData.name || ''} onChange={handleChange} required style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+        </div>
+        <div>
+          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Lead Email</label>
+          <input type="email" name="email" value={formData.email || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+        </div>
+        <div>
+          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Bukti / Profile URL</label>
+          <input type="text" name="url" value={formData.url || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+        </div>
+        <div>
+          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Industry / Role</label>
+          <input type="text" name="industry" value={formData.industry || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+        </div>
+        <div>
+          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Marketer Name</label>
+          <input type="text" name="marketer" value={formData.marketer || ''} onChange={handleChange} required style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+        </div>
+        <div>
+          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Source / Influencer</label>
+          <input type="text" name="source" value={formData.source || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+        </div>
+        <div>
+          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Template Used</label>
+          <input type="text" name="template" value={formData.template || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+        </div>
+        <div>
+          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Interaction Type</label>
+          <select name="interactionType" value={formData.interactionType || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}}>
+            <option value="">-- Pilih --</option>
+            <option value="Direct Ask">Direct Ask</option>
+            <option value="Soft Sell">Soft Sell</option>
+            <option value="Inbound">Inbound</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Status Conversion</label>
+          <select name="status" value={formData.status || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}}>
+            <option value="New">New</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Deal / Signed">Deal / Signed</option>
+            <option value="Drop">Drop</option>
+          </select>
+        </div>
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+         <div>
+            <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Response Time</label>
+            <input type="text" name="responseTime" value={formData.responseTime || ''} onChange={handleChange} placeholder="e.g. 5 Mins" style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+         </div>
+         <div style={{ display: 'flex', alignItems: 'center', paddingTop: '15px' }}>
+            <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#374151', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600 }}>
+              <input type="checkbox" name="tagged" checked={formData.tagged || false} onChange={handleChange} style={{ width: '16px', height: '16px' }} />
+              Jonathan Tagged?
+            </label>
+         </div>
+      </div>
+
+      <div>
+        <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Notes / Feedback</label>
+        <textarea name="notes" value={formData.notes || ''} onChange={handleChange} style={{ ...styles.input, width: '100%', height: '70px', resize: 'none', boxSizing: 'border-box' }} />
+      </div>
+
+      <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+        <button type="button" onClick={onCancel} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#374151', cursor: 'pointer', fontWeight: 600 }}>Batal</button>
+        <button type="submit" style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#0ea5e9', color: 'white', fontWeight: 600, cursor: 'pointer' }}>{initialData ? 'Update Data' : 'Simpan Baru'}</button>
+      </div>
+    </form>
+  );
+};
+
 // --- PIN MODAL COMPONENT ---
-// Anda dapat memisahkan ini nanti ke src/components/ui/PinModal.tsx jika Anda mau
 const PinModal = ({ isOpen, onClose, onSubmit, isDark, styles }: any) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
