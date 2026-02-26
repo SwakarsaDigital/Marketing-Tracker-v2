@@ -1,32 +1,26 @@
 import React, { useEffect, useState, useMemo } from 'react';
 
+// --- IMPORTS DARI FILE YANG SUDAH DIPISAH ---
+import { LXStyles } from './styles/lxStyles';
+import { 
+  FileText, Users, BarChart2, RefreshCw, LinkIcon, X, 
+  SearchIcon, CheckSquare, Shield, Lock, Download, Edit, Trash2, MenuIcon, 
+  TrendingUp
+} from './components/icons/icons';
+import { FullScreenLoader } from './components/ui/FullScreenLoader';
+import { AnimatedModal } from './components/ui/AnimatedModal';
+import { NotificationToast, NotificationState } from './components/ui/NotificationToast';
+import { ConfirmModal } from './components/ui/ConfirmModal';
+import { SearchableDropdown } from './components/ui/SearchableDropdown';
+import { AddLeadForm } from './components/forms/AddLeadForm';
+
 // --- CONFIGURATION ---
 // URL Google Apps Script Anda
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx0TaLAHHMxE3JANtOYcmhQIZxxHsBXLkoGFAqr4Fdy8M6_SIWScP8o90cFRsTS9l2r/exec";
-
-// --- SECURITY PIN (Untuk Admin Mode) ---
 const SECURITY_PIN = "Yoyomagey1@"; 
 
-// --- ICONS (SVG Components) ---
-const FileText = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>);
-const Users = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>);
-const BarChart2 = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>);
-const RefreshCw = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>);
-const LinkIcon = ({ size = 16, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>);
-const X = ({ size = 24, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>);
-const SearchIcon = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
-const CheckCircle = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>);
-const AlertCircle = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>);
-const TrendingUp = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>);
-const Trash2 = ({ size = 18, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>);
-const Edit = ({ size = 18, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>);
-const Lock = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>);
-const Download = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>);
-const CheckSquare = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>);
-const Shield = ({ size = 20, color = 'currentColor', ...props }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>);
-
 // --- TYPES ---
-interface DailyLog {
+export interface DailyLog {
   id: number;
   rowNumber: number; 
   date: string; 
@@ -45,213 +39,6 @@ interface DailyLog {
   email: string;
   approvalStatus: 'None' | 'Pending' | 'Approved' | 'Declined';
 }
-
-interface NotificationState {
-  message: string;
-  type: 'success' | 'error' | 'info';
-}
-
-// --- ANIMATION HOOK ---
-function useDelayUnmount(isMounted: boolean, delayTime: number) {
-  const [shouldRender, setShouldRender] = useState(false);
-  useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout>;
-    if (isMounted && !shouldRender) {
-      setShouldRender(true);
-    } else if (!isMounted && shouldRender) {
-      timeoutId = setTimeout(() => setShouldRender(false), delayTime);
-    }
-    return () => clearTimeout(timeoutId);
-  }, [isMounted, delayTime, shouldRender]);
-  return shouldRender;
-}
-
-// --- REUSABLE COMPONENTS ---
-const FullScreenLoader = ({ isOpen, isDark }: { isOpen: boolean, isDark: boolean }) => {
-  const shouldRender = useDelayUnmount(isOpen, 250);
-  const [isClosing, setIsClosing] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) setIsClosing(false);
-    else setIsClosing(true);
-  }, [isOpen]);
-
-  if (!shouldRender) return null;
-
-  return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: isDark ? 'rgba(17, 24, 39, 0.7)' : 'rgba(255, 255, 255, 0.7)',
-      backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center',
-      zIndex: 9999, animation: isClosing ? 'fadeOut 0.25s ease-out forwards' : 'fadeIn 0.25s ease-out forwards'
-    }}>
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
-        backgroundColor: isDark ? '#1f2937' : 'white',
-        padding: '30px 40px', borderRadius: '20px',
-        boxShadow: isDark ? '0 10px 25px rgba(0,0,0,0.5)' : '0 10px 25px rgba(0,0,0,0.1)',
-        border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-        animation: isClosing ? 'scaleOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards' : 'scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards'
-      }}>
-        <div style={{
-          width: '45px', height: '45px', border: '4px solid',
-          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-          borderTopColor: '#16a34a', borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }}></div>
-        <div style={{ fontWeight: 600, color: isDark ? 'white' : '#374151', animation: 'pulse 1.5s ease-in-out infinite', fontSize: '15px' }}>
-           Memproses Data...
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const AnimatedModal = ({ isOpen, onClose, children, styles, contentStyle }: any) => {
-  const shouldRender = useDelayUnmount(isOpen, 250);
-  const [isClosing, setIsClosing] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) setIsClosing(false);
-    else setIsClosing(true);
-  }, [isOpen]);
-
-  if (!shouldRender) return null;
-
-  return (
-    <div style={{...styles.modalOverlay, animation: isClosing ? 'fadeOut 0.25s ease-out forwards' : 'fadeIn 0.25s ease-out forwards'}} onMouseDown={onClose}>
-       <div style={{...styles.modalContent, ...contentStyle, animation: isClosing ? 'scaleOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards' : 'scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards'}} onMouseDown={e => e.stopPropagation()}>
-         {children}
-       </div>
-    </div>
-  );
-};
-
-const NotificationToast = ({ notification, onClose }: { notification: NotificationState, onClose: () => void }) => {
-  const [isClosing, setIsClosing] = useState(false);
-
-  useEffect(() => {
-    const animTimer = setTimeout(() => setIsClosing(true), 2700); 
-    const unmountTimer = setTimeout(onClose, 3000);
-    return () => { clearTimeout(animTimer); clearTimeout(unmountTimer); };
-  }, [onClose]);
-
-  const handleManualClose = () => {
-    setIsClosing(true);
-    setTimeout(onClose, 300);
-  };
-
-  const bgColor = notification.type === 'success' ? '#10b981' : (notification.type === 'error' ? '#ef4444' : '#3b82f6');
-
-  return (
-    <div style={{
-      position: 'fixed', top: '24px', right: '24px', zIndex: 3000,
-      backgroundColor: bgColor,
-      color: 'white', padding: '14px 24px', borderRadius: '12px',
-      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-      display: 'flex', alignItems: 'center', gap: '12px',
-      fontWeight: 600, fontSize: '14px',
-      animation: isClosing ? 'slideOut 0.3s ease-in forwards' : 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
-    }}>
-      {notification.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-      <span>{notification.message}</span>
-      <button onClick={handleManualClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', marginLeft: '12px', display: 'flex', padding: '4px', opacity: 0.8 }}>
-        <X size={16} />
-      </button>
-    </div>
-  );
-};
-
-// 4. Modal Konfirmasi Universal (Delete, Logout, Approve)
-const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Konfirmasi", confirmColor = "#ef4444", icon = "alert", isDark, styles }: any) => {
-  return (
-    <AnimatedModal isOpen={isOpen} onClose={onClose} styles={styles} contentStyle={{ width: '400px', textAlign: 'center', padding: '30px 24px' }}>
-       {icon === "alert" 
-          ? <AlertCircle size={56} color={confirmColor} style={{margin: '0 auto 16px auto', display: 'block'}} />
-          : <CheckCircle size={56} color={confirmColor} style={{margin: '0 auto 16px auto', display: 'block'}} />
-       }
-       <h3 style={{marginTop:0, color: isDark?'white':'#1f2937', fontSize: '20px'}}>{title}</h3>
-       <div style={{fontSize: '14px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '24px', lineHeight: 1.5}}>
-         {message}
-       </div>
-       <div style={{display: 'flex', gap: '12px'}}>
-          <button type="button" onClick={onClose} style={{flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#374151', cursor: 'pointer', fontWeight: 600}}>Batal</button>
-          <button type="button" onClick={() => { onConfirm(); onClose(); }} style={{flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: confirmColor, color: 'white', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(0,0,0, 0.2)'}}>{confirmText}</button>
-       </div>
-    </AnimatedModal>
-  )
-};
-
-// --- DYNAMIC STYLES ---
-const LXStyles = (isDark: boolean, isMobile: boolean) => ({
-  container: { 
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize: '14px', color: isDark ? '#f9fafb' : '#333', 
-    height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column' as const, 
-    backgroundColor: isDark ? '#111827' : '#f9fafb', overflow: 'hidden'
-  },
-  header: { 
-    backgroundColor: '#166534', color: 'white', padding: isMobile ? '10px 16px' : '15px 20px', 
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 20,
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-  },
-  tabBar: { 
-    display: isMobile ? 'none' : 'flex', borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb', 
-    backgroundColor: isDark ? '#1f2937' : 'white', overflowX: 'auto' as const
-  },
-  tab: (isActive: boolean) => ({
-    padding: '12px 20px', cursor: 'pointer', borderBottom: isActive ? '3px solid #166534' : '3px solid transparent',
-    color: isActive ? '#22c55e' : (isDark ? '#9ca3af' : '#6b7280'), fontWeight: isActive ? 600 : 500, 
-    display: 'flex', alignItems: 'center', gap: '8px',
-    backgroundColor: isActive ? (isDark ? '#064e3b' : '#f0fdf4') : 'transparent',
-    transition: 'all 0.2s ease', whiteSpace: 'nowrap' as const
-  }),
-  content: { 
-    padding: isMobile ? '15px' : '20px', overflow: 'auto', flex: 1, width: '100%', boxSizing: 'border-box' as const 
-  },
-  table: { 
-    width: '100%', borderCollapse: 'collapse' as const, backgroundColor: isDark ? '#1f2937' : 'white', 
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderRadius: '8px', overflow: 'hidden'
-  },
-  th: { 
-    padding: '12px', borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb', 
-    backgroundColor: isDark ? '#374151' : '#f9fafb', textAlign: 'left' as const, 
-    fontSize: '12px', fontWeight: 700, color: isDark ? '#d1d5db' : '#4b5563', whiteSpace: 'nowrap' as const 
-  },
-  td: { 
-    padding: '10px 12px', borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb', fontSize: '13px', 
-    color: isDark ? '#e5e7eb' : '#333'
-  },
-  input: { 
-    width: '100%', padding: '10px', border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', 
-    borderRadius: '6px', boxSizing: 'border-box' as const, backgroundColor: isDark ? '#374151' : 'white',
-    color: isDark ? '#fff' : '#000', outline: 'none', fontFamily: 'inherit'
-  },
-  card: { 
-    backgroundColor: isDark ? '#1f2937' : 'white', padding: '20px', borderRadius: '12px', 
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-    display: 'flex', flexDirection: 'column' as const, justifyContent: 'center'
-  },
-  btnPrimary: {
-    backgroundColor:'#166534', color:'white', border:'none', padding:'10px 20px', borderRadius:'8px', 
-    cursor:'pointer', fontWeight:600, display: 'flex', alignItems: 'center', gap: '8px',
-    transition: 'background-color 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-  },
-  modalOverlay: {
-    position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)',
-    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
-  },
-  modalContent: {
-    backgroundColor: isDark ? '#1f2937' : 'white', padding: '24px', borderRadius: '16px', width: '450px', maxWidth: '95%',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxHeight: '90vh', overflowY: 'auto' as const,
-    border: isDark ? '1px solid #374151' : 'none'
-  },
-  actionBtn: {
-    padding: '6px', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    transition: 'background 0.2s'
-  }
-});
-
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
@@ -284,11 +71,12 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [marketerFilter, setMarketerFilter] = useState('');
-  const [marketerSearchQuery, setMarketerSearchQuery] = useState(''); // Untuk halaman Marketers
+  const [marketerSearchQuery, setMarketerSearchQuery] = useState(''); 
   
-  // Theme
+  // Theme & Responsiveness
   const [isDark, setIsDark] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const styles = useMemo(() => LXStyles(isDark, isMobile), [isDark, isMobile]);
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
@@ -319,15 +107,14 @@ export default function App() {
       const dataLogs = await resLogs.json();
       
       if(dataLogs.status === 'success') {
-        // PERBAIKAN FATAL: Menghitung letak baris yang absolut dan tahan geser
         let offset = 1;
         if (dataLogs.data && dataLogs.data.length > 0) {
           const firstRow = dataLogs.data[0];
           const firstVal = Array.isArray(firstRow) ? firstRow[0] : firstRow["Date of Contact"];
           if (String(firstVal).toLowerCase().includes('date')) {
-            offset = 1; // Jika index 0 adalah header, data mulai dari row 2 (1+1)
+            offset = 1; 
           } else {
-            offset = 2; // Jika index 0 sudah murni data, data mulai dari row 2 (0+2)
+            offset = 2; 
           }
         }
 
@@ -374,7 +161,7 @@ export default function App() {
 
           return {
             id: idx,
-            rowNumber: originalIndex + offset, // Ini menjamin baris sinkron dengan Spreadsheet
+            rowNumber: originalIndex + offset,
             date: dateStr,
             rawDateIso: rawDateIso,
             leadName: getValue("Lead Name", 1) || '-',
@@ -438,7 +225,6 @@ export default function App() {
     return Array.from(new Set(activeInDateRange.map(l => l.marketer))).filter(Boolean).sort();
   }, [dailyLogs, dateRange]);
 
-
   // Pagination Calculation
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -467,7 +253,10 @@ export default function App() {
 
     kpiLogs.forEach(log => {
       if (log.interactionType === 'Direct Ask') directAskCount++;
-      if (log.status === 'Deal/Signed') conversionCount++;
+      const currentStatus = String(log.status).toLowerCase();
+      if (currentStatus.includes('deal') || currentStatus.includes('signed')) {
+          conversionCount++;
+      }
       const src = log.source || 'Unknown';
       sourceMap[src] = (sourceMap[src] || 0) + 1;
     });
@@ -512,7 +301,8 @@ export default function App() {
 
        if (matchDate) {
            stats[mName].totalLeads += 1;
-           if (log.status === 'Deal/Signed') stats[mName].deals += 1;
+           const currentStatus = String(log.status).toLowerCase();
+           if (currentStatus.includes('deal') || currentStatus.includes('signed')) stats[mName].deals += 1;
            if (log.interactionType === 'Direct Ask') stats[mName].directAsks += 1;
        }
     });
@@ -572,7 +362,7 @@ export default function App() {
 
       await fetch(GAS_API_URL, {
         method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Format paling aman untuk GAS
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       });
 
@@ -608,9 +398,11 @@ export default function App() {
     } else {
       setActiveTab('admin');
     }
+    setIsMobileMenuOpen(false);
   };
 
   const handleLogoutClick = () => {
+    setIsMobileMenuOpen(false);
     setConfirmDialog({
       isOpen: true,
       title: 'Konfirmasi Logout',
@@ -679,7 +471,6 @@ export default function App() {
     const leadToUpdate = approvalModalLead;
     const emailToUpdate = approvalEmail;
 
-    // --- OPTIMISTIC UPDATE INSTAN ---
     setDailyLogs(prevLogs => prevLogs.map(log => 
        log.id === leadToUpdate.id ? { ...log, email: emailToUpdate, approvalStatus: 'Pending' } : log
     ));
@@ -714,7 +505,6 @@ export default function App() {
     const newApprovalStatus = actionType === 'Approve' ? 'Approved' : 'Declined';
     const newStatus = actionType === 'Approve' ? 'In Progress' : lead.status;
 
-    // --- OPTIMISTIC UPDATE INSTAN ---
     setDailyLogs(prevLogs => prevLogs.map(l => 
        l.id === lead.id ? { ...l, approvalStatus: newApprovalStatus, status: newStatus } : l
     ));
@@ -740,6 +530,11 @@ export default function App() {
     await performActionSilently('edit', dataToUpdate, `${actionType} sukses untuk ${lead.leadName}.`);
   };
 
+  const switchTabMobile = (tab: any) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+  };
+
 
   return (
     <div style={styles.container}>
@@ -751,6 +546,7 @@ export default function App() {
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         @keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.9); opacity: 0; } }
+        @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
@@ -767,7 +563,7 @@ export default function App() {
         isDark={isDark} styles={styles}
       />
 
-      {/* UNIVERSAL CONFIRM MODAL (Logout, Delete, Approve/Decline) */}
+      {/* UNIVERSAL CONFIRM MODAL */}
       <ConfirmModal 
          isOpen={confirmDialog.isOpen} 
          onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} 
@@ -801,26 +597,72 @@ export default function App() {
          </form>
       </AnimatedModal>
 
+      {/* HAMBURGER MENU OVERLAY (MOBILE) */}
+      {isMobile && isMobileMenuOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+          animation: 'fadeIn 0.2s ease-out forwards'
+        }} onClick={() => setIsMobileMenuOpen(false)}>
+           <div style={{
+              width: '260px', height: '100%', backgroundColor: isDark ? '#1f2937' : '#fff',
+              padding: '20px 0', display: 'flex', flexDirection: 'column',
+              animation: 'slideInLeft 0.3s forwards', boxShadow: '2px 0 10px rgba(0,0,0,0.2)'
+           }} onClick={e => e.stopPropagation()}>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', marginBottom: '20px'}}>
+                 <h2 style={{margin: 0, color: isDark ? '#fff' : '#166534', fontSize: '18px', fontWeight: 700}}>Menu</h2>
+                 <button onClick={() => setIsMobileMenuOpen(false)} style={{background:'none', border:'none', color: isDark?'#fff':'#000', cursor:'pointer'}}><X size={24}/></button>
+              </div>
+              
+              <div style={{display:'flex', flexDirection:'column', gap:'5px', padding: '0 10px'}}>
+                <button onClick={() => switchTabMobile('daily')} style={{...styles.tab(activeTab === 'daily'), borderRadius:'8px', border:'none', background: activeTab==='daily' ? (isDark?'#374151':'#f0fdf4') : 'transparent'}}>
+                  <FileText size={18} /> Daily Log
+                </button>
+                <button onClick={() => switchTabMobile('marketers')} style={{...styles.tab(activeTab === 'marketers'), borderRadius:'8px', border:'none', background: activeTab==='marketers' ? (isDark?'#374151':'#f0fdf4') : 'transparent'}}>
+                  <Users size={18} /> Marketers
+                </button>
+                <button onClick={() => switchTabMobile('influencer')} style={{...styles.tab(activeTab === 'influencer'), borderRadius:'8px', border:'none', background: activeTab==='influencer' ? (isDark?'#374151':'#f0fdf4') : 'transparent'}}>
+                  <CheckSquare size={18} /> Influencer Stats
+                </button>
+                <button onClick={() => switchTabMobile('kpi')} style={{...styles.tab(activeTab === 'kpi'), borderRadius:'8px', border:'none', background: activeTab==='kpi' ? (isDark?'#374151':'#f0fdf4') : 'transparent'}}>
+                  <BarChart2 size={18} /> Dashboard KPI
+                </button>
+                <div style={{borderTop: isDark?'1px solid #374151':'1px solid #eee', margin: '10px 0'}}></div>
+                <button onClick={handleTabAdminClick} style={{...styles.tab(activeTab === 'admin'), borderRadius:'8px', border:'none', color: isAdmin ? '#16a34a' : (isDark?'#9ca3af':'#6b7280'), background: activeTab==='admin' ? (isDark?'#374151':'#f0fdf4') : 'transparent'}}>
+                  {isAdmin ? <Shield size={18} /> : <Lock size={18} />} Admin Dashboard
+                </button>
+              </div>
+           </div>
+        </div>
+      )}
 
       {/* HEADER */}
       <div style={styles.header}>
         <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-           <div style={{background: 'rgba(255,255,255,0.2)', padding: '8px', borderRadius: '8px', display: 'flex'}}>
+           {/* Hamburger Icon for Mobile */}
+           {isMobile && (
+             <button onClick={() => setIsMobileMenuOpen(true)} style={{background:'none', border:'none', color:'white', cursor:'pointer', padding: 0, display: 'flex', alignItems: 'center'}}>
+               <MenuIcon size={26} />
+             </button>
+           )}
+           <div style={{background: 'rgba(255,255,255,0.2)', padding: '8px', borderRadius: '8px', display: isMobile ? 'none' : 'flex'}}>
              <FileText size={20} />
            </div>
            <div>
-             <h1 style={{fontSize:'16px', margin:0, fontWeight:700}}>Marketing Tracker</h1>
+             <h1 style={{fontSize: isMobile ? '16px' : '18px', margin:0, fontWeight:700}}>Marketing Tracker</h1>
              <div style={{fontSize:'11px', opacity:0.8, display:'flex', alignItems:'center', gap:'4px'}}>
                <span style={{width:'6px', height:'6px', borderRadius:'50%', backgroundColor:'#4ade80'}}></span> Online
              </div>
            </div>
         </div>
-        <div style={{display:'flex', gap:'10px'}}>
-          <button onClick={() => isAdmin ? handleLogoutClick() : setIsLoginModalOpen(true)} style={{background: isAdmin ? '#ef4444' : '#3b82f6', border:'none', color:'white', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor: 'pointer', fontWeight: 600}}>
-             {isAdmin ? 'Keluar Admin' : 'Masuk Admin'}
-          </button>
-          <button onClick={() => fetchData(true)} style={{background:'none', border:'none', color:'white', cursor:'pointer', opacity: 0.8}} title="Refresh Data">
-            <RefreshCw size={20} />
+        <div style={{display:'flex', gap:'8px'}}>
+          {!isMobile && (
+             <button onClick={() => isAdmin ? handleLogoutClick() : setIsLoginModalOpen(true)} style={{background: isAdmin ? '#ef4444' : '#3b82f6', border:'none', color:'white', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor: 'pointer', fontWeight: 600}}>
+                {isAdmin ? 'Keluar Admin' : 'Masuk Admin'}
+             </button>
+          )}
+          <button onClick={() => fetchData(true)} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:'6px', padding:'6px', cursor:'pointer'}} title="Refresh Data">
+            <RefreshCw size={18} />
           </button>
           <button onClick={() => setIsDark(!isDark)} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor: 'pointer', fontWeight: 500}}>
              {isDark ? 'Light' : 'Dark'}
@@ -828,7 +670,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* TABS PENGGUNA */}
+      {/* TABS PENGGUNA (Hanya muncul di Desktop) */}
       <div style={styles.tabBar}>
         <div onClick={() => setActiveTab('daily')} style={styles.tab(activeTab === 'daily')}><FileText size={16} /> Daily Log</div>
         <div onClick={() => setActiveTab('marketers')} style={styles.tab(activeTab === 'marketers')}><Users size={16} /> Marketers</div>
@@ -844,90 +686,75 @@ export default function App() {
         </div>
       </div>
 
-      {/* MOBILE NAV */}
-      {isMobile && (
-        <div style={{display:'flex', gap:'10px', padding:'12px', overflowX:'auto', borderBottom: isDark ? '1px solid #374151' : '1px solid #ddd'}}>
-             <button onClick={() => setActiveTab('daily')} style={{padding:'8px 16px', borderRadius:'20px', border:'none', backgroundColor: activeTab==='daily'?'#166534':'#e5e7eb', color: activeTab==='daily'?'white':'#374151', fontSize:'12px', fontWeight: 600}}>Log</button>
-             <button onClick={() => setActiveTab('marketers')} style={{padding:'8px 16px', borderRadius:'20px', border:'none', backgroundColor: activeTab==='marketers'?'#166534':'#e5e7eb', color: activeTab==='marketers'?'white':'#374151', fontSize:'12px', fontWeight: 600}}>Marketers</button>
-             <button onClick={() => setActiveTab('influencer')} style={{padding:'8px 16px', borderRadius:'20px', border:'none', backgroundColor: activeTab==='influencer'?'#166534':'#e5e7eb', color: activeTab==='influencer'?'white':'#374151', fontSize:'12px', fontWeight: 600}}>Influencer</button>
-             <button onClick={() => setActiveTab('kpi')} style={{padding:'8px 16px', borderRadius:'20px', border:'none', backgroundColor: activeTab==='kpi'?'#166534':'#e5e7eb', color: activeTab==='kpi'?'white':'#374151', fontSize:'12px', fontWeight: 600}}>KPI</button>
-             <button onClick={handleTabAdminClick} style={{padding:'8px 16px', borderRadius:'20px', border:'none', backgroundColor: activeTab==='admin'?(isAdmin?'#16a34a':'#ef4444'):'#fee2e2', color: activeTab==='admin'?'white':'#ef4444', fontSize:'12px', fontWeight: 600}}>Admin</button>
-        </div>
-      )}
-
       {/* CONTENT AREA */}
       <div style={styles.content}>
         
         {/* --- TAB 1 & 5 : DAILY LOG & ADMIN DASHBOARD --- */}
         {(activeTab === 'daily' || (activeTab === 'admin' && isAdmin)) && (
           <div>
-            <div style={{display:'flex', justifyContent:'space-between', marginBottom:'20px', flexWrap:'wrap', gap:'15px', alignItems: 'flex-start'}}>
+            {/* FITUR PENCARIAN & FILTER RESPONSIVE */}
+            <div style={{display:'flex', justifyContent:'space-between', marginBottom:'20px', flexWrap:'wrap', gap:'15px', alignItems: 'flex-end'}}>
                
                <div style={{display:'flex', gap:'10px', flex:1, flexWrap: 'wrap', alignItems: 'center'}}>
                   {/* Judul Halaman dinamis */}
                   <div style={{width: '100%', marginBottom: '5px'}}>
-                     <h2 style={{fontSize:'18px', margin:0, color: isDark?'white':'#333', fontWeight: 700}}>
-                        {activeTab === 'admin' ? 'Admin Dashboard - Kelola & Setujui Leads (Pending Only)' : 'Daily Log - Semua Leads'}
+                     <h2 style={{fontSize: isMobile ? '16px' : '18px', margin:0, color: isDark?'white':'#333', fontWeight: 700}}>
+                        {activeTab === 'admin' ? 'Admin Dashboard - Kelola & Setujui Leads' : 'Daily Log - Semua Leads'}
                      </h2>
                   </div>
 
                   {/* Name Search */}
-                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: '1 1 200px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 100%' : '1 1 200px', minWidth: '150px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
                      <SearchIcon size={16} color="#9ca3af"/>
                      <input placeholder="Cari Lead Name..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '13px'}} />
                   </div>
                   
                   {/* Date Range Start */}
-                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 45%' : '0 1 auto', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
                      <span style={{fontSize:'12px', color:'#9ca3af', marginRight:'5px'}}>Start:</span>
-                     <input type="date" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', fontFamily: 'inherit'}} />
+                     <input type="date" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', fontFamily: 'inherit', width: '100%'}} />
                   </div>
 
                   {/* Date Range End */}
-                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 45%' : '0 1 auto', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
                      <span style={{fontSize:'12px', color:'#9ca3af', marginRight:'5px'}}>End:</span>
-                     <input type="date" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', fontFamily: 'inherit'}} />
+                     <input type="date" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', fontFamily: 'inherit', width: '100%'}} />
                   </div>
 
-                  {/* Searchable Marketer Dropdown (DATALIST) */}
-                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
-                     <input 
-                        list="marketers-list"
-                        value={marketerFilter} 
-                        onChange={(e) => setMarketerFilter(e.target.value)} 
-                        placeholder="All Marketers (Ketik...)"
-                        style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', width: '150px', fontFamily: 'inherit'}}
-                     />
-                     <datalist id="marketers-list">
-                        <option value="">All Marketers</option>
-                        {availableMarketers.map(m => <option key={m} value={m} />)}
-                     </datalist>
+                  {/* Kustom Searchable Dropdown Marketer (Fitur Kayak Google Search) */}
+                  <div style={{ flex: isMobile ? '1 1 100%' : '1 1 180px' }}>
+                    <SearchableDropdown 
+                       value={marketerFilter} 
+                       onChange={setMarketerFilter} 
+                       options={availableMarketers} 
+                       placeholder="Semua Marketer (Cari...)" 
+                       isDark={isDark} 
+                    />
                   </div>
-
                </div>
 
                {/* Action Buttons */}
-               <div style={{display: 'flex', gap: '10px', height: 'fit-content'}}>
-                  <button onClick={handleExportCSV} style={{...styles.btnPrimary, backgroundColor: '#0284c7'}} title="Export ke Excel/CSV">
-                    <Download size={16} /> <span style={{display: isMobile?'none':'inline'}}>Export</span>
+               <div style={{display: 'flex', gap: '10px', height: 'fit-content', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-start'}}>
+                  <button onClick={handleExportCSV} style={{...styles.btnPrimary, backgroundColor: '#0284c7', flex: isMobile ? 1 : 'none', justifyContent: 'center'}} title="Export ke Excel/CSV">
+                    <Download size={16} /> <span>Export</span>
                   </button>
-                  <button onClick={() => { setEditingLead(null); setIsModalOpen(true); }} style={styles.btnPrimary}>
-                    <span>+</span> <span style={{display: isMobile?'none':'inline'}}>New Lead</span>
+                  <button onClick={() => { setEditingLead(null); setIsModalOpen(true); }} style={{...styles.btnPrimary, flex: isMobile ? 1 : 'none', justifyContent: 'center'}}>
+                    <span>+</span> <span>New Lead</span>
                   </button>
                </div>
             </div>
 
+            {/* TABEL DATA RESPONSIVE */}
             <div style={{overflowX: 'auto', border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: '12px'}}>
                <table style={styles.table}>
                   <thead>
                     <tr>
                       <th style={{...styles.th, textAlign: 'center'}}>No.</th>
-                      {activeTab === 'admin' && <th style={styles.th}>⚙️ Actions</th>}
                       <th style={styles.th}>Date</th>
                       <th style={styles.th}>Lead Name</th>
                       <th style={styles.th}>Bukti GDrive</th> 
                       <th style={styles.th}>Lead Email</th>
-                      <th style={styles.th}>Approval Status</th> 
+                      <th style={styles.th}>Approval Status / Action</th> 
                       <th style={styles.th}>Status</th>
                       <th style={styles.th}>Industry</th>
                       <th style={styles.th}>Source</th>
@@ -939,7 +766,7 @@ export default function App() {
                   </thead>
                   <tbody>
                     {paginatedLogs.length === 0 ? (
-                       <tr><td colSpan={14} style={{padding:'40px', textAlign:'center', color:'#6b7280'}}>Tidak ada data.</td></tr>
+                       <tr><td colSpan={13} style={{padding:'40px', textAlign:'center', color:'#6b7280'}}>Tidak ada data.</td></tr>
                     ) : (
                        paginatedLogs.map((row, index) => (
                          <tr key={row.id} style={{backgroundColor: isDark ? 'transparent' : 'white'}}>
@@ -947,54 +774,57 @@ export default function App() {
                               {(currentPage - 1) * itemsPerPage + index + 1}
                            </td>
 
-                           {activeTab === 'admin' && (
-                              <td style={styles.td}>
-                                <div style={{display:'flex', gap:'5px', alignItems: 'center'}}>
-                                  <button onClick={() => handleApproveClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#dcfce7', color: '#16a34a'}} title="Approve"><CheckSquare size={14} /></button>
-                                  <button onClick={() => handleDeclineClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444'}} title="Decline"><X size={14} /></button>
-                                  <button onClick={() => {setEditingLead(row); setIsModalOpen(true);}} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#e0f2fe', color: '#0284c7'}} title="Edit"><Edit size={14} /></button>
-                                  <button onClick={() => handleDeleteClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444'}} title="Delete"><Trash2 size={14} /></button>
-                                </div>
-                              </td>
-                           )}
-
                            <td style={styles.td}>{row.date}</td>
-                           <td style={styles.td}><span style={{fontWeight: 600}}>{row.leadName}</span></td>
+                           <td style={styles.td}><span style={{fontWeight: 600, display: 'inline-block', whiteSpace: 'nowrap'}}>{row.leadName}</span></td>
                            <td style={styles.td}>{row.profileUrl && <a href={row.profileUrl} target="_blank" rel="noreferrer" style={{color:'#2563eb', display: 'flex', alignItems: 'center'}}><LinkIcon size={16}/></a>}</td>
                            <td style={styles.td}>{row.email || '-'}</td>
                            
                            <td style={styles.td}>
+                              {/* Logika Tampilan Utama Approval */}
                               {activeTab === 'admin' ? (
-                                 <span style={{color: '#d97706', fontSize: '12px', fontWeight: 600}}>Pending Action</span>
+                                 <div style={{display:'flex', gap:'5px', alignItems: 'center'}}>
+                                   <button onClick={() => handleApproveClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#dcfce7', color: '#16a34a', padding: '4px 8px'}} title="Approve"><CheckSquare size={14} /> <span style={{marginLeft:'4px', fontSize:'11px', fontWeight:600}}>Approve</span></button>
+                                   <button onClick={() => handleDeclineClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444', padding: '4px 8px'}} title="Decline"><X size={14} /> <span style={{marginLeft:'4px', fontSize:'11px', fontWeight:600}}>Decline</span></button>
+                                 </div>
                               ) : (
                                  row.status === 'New' ? (
                                     row.approvalStatus === 'Pending' ? (
-                                       <span style={{color: '#d97706', fontSize: '12px', fontWeight: 600}}>Pending...</span>
+                                       <span style={{color: '#d97706', fontSize: '12px', fontWeight: 600, display: 'inline-block', whiteSpace: 'nowrap'}}>Pending...</span>
                                     ) : row.approvalStatus === 'Declined' ? (
                                        <div style={{display:'flex', flexDirection: 'column', gap:'4px'}}>
                                           <span style={{color: '#ef4444', fontSize: '12px', fontWeight: 700}}>Declined</span>
-                                          <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'10px', padding: '2px 6px', borderRadius:'4px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'black', border:isDark?'1px solid #4b5563':'1px solid #ddd', cursor:'pointer'}}>Req. Again</button>
+                                          <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'10px', padding: '2px 6px', borderRadius:'4px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'black', border:isDark?'1px solid #4b5563':'1px solid #ddd', cursor:'pointer', whiteSpace: 'nowrap'}}>Req. Again</button>
                                        </div>
                                     ) : (
-                                       <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'11px', padding: '4px 8px', borderRadius:'6px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'black', border:isDark?'1px solid #4b5563':'1px solid #ddd', cursor:'pointer'}}>Req. Approval</button>
+                                       <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'11px', padding: '4px 8px', borderRadius:'6px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'black', border:isDark?'1px solid #4b5563':'1px solid #ddd', cursor:'pointer', whiteSpace: 'nowrap'}}>Req. Approval</button>
                                     )
-                                 ) : <span style={{color:'#16a34a', fontSize:'11px', fontWeight: 600}}>Approved</span>
+                                 ) : <span style={{color:'#16a34a', fontSize:'11px', fontWeight: 600, display: 'inline-block', whiteSpace: 'nowrap'}}>Approved</span>
+                              )}
+
+                              {/* Alat Khusus Admin: Edit & Delete Tampil di Semua Tab jika sudah Login */}
+                              {isAdmin && (
+                                 <div style={{display:'flex', gap:'5px', alignItems: 'center', marginTop: '8px', paddingTop: '8px', borderTop: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'}}>
+                                    <button onClick={() => {setEditingLead(row); setIsModalOpen(true);}} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#e0f2fe', color: '#0284c7'}} title="Edit Log Manual"><Edit size={14} /></button>
+                                    <button onClick={() => handleDeleteClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444'}} title="Delete Log Manual"><Trash2 size={14} /></button>
+                                 </div>
                               )}
                            </td>
 
                            <td style={styles.td}>
                              <span style={{
+                               display: 'inline-block',
+                               whiteSpace: 'nowrap',
                                padding:'4px 10px', borderRadius:'20px', fontSize:'11px', fontWeight:600,
-                               backgroundColor: row.status==='Deal/Signed' ? '#dcfce7' : (row.status==='In Progress' ? '#dbeafe' : (isDark ? '#374151' : '#f3f4f6')),
-                               color: row.status==='Deal/Signed' ? '#166534' : (row.status==='In Progress' ? '#1e40af' : (isDark ? '#e5e7eb' : '#374151')),
+                               backgroundColor: String(row.status).toLowerCase().includes('deal')||String(row.status).toLowerCase().includes('signed') ? '#dcfce7' : (row.status==='In Progress' ? '#dbeafe' : (isDark ? '#374151' : '#f3f4f6')),
+                               color: String(row.status).toLowerCase().includes('deal')||String(row.status).toLowerCase().includes('signed') ? '#166534' : (row.status==='In Progress' ? '#1e40af' : (isDark ? '#e5e7eb' : '#374151')),
                              }}>{row.status}</span>
                            </td>
-                           <td style={styles.td}>{row.industry}</td>
-                           <td style={styles.td}>{row.source}</td>
-                           <td style={styles.td}>{row.template}</td>
-                           <td style={styles.td}>{row.interactionType}</td>
-                           <td style={{...styles.td, fontSize:'12px', color: isDark ? '#9ca3af' : '#6b7280', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{row.notes}</td>
-                           <td style={styles.td}>{row.marketer}</td>
+                           <td style={{...styles.td, whiteSpace: 'nowrap'}}>{row.industry}</td>
+                           <td style={{...styles.td, whiteSpace: 'nowrap'}}>{row.source}</td>
+                           <td style={{...styles.td, whiteSpace: 'nowrap'}}>{row.template}</td>
+                           <td style={{...styles.td, whiteSpace: 'nowrap'}}>{row.interactionType}</td>
+                           <td style={{...styles.td, fontSize:'12px', color: isDark ? '#9ca3af' : '#6b7280', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}} title={row.notes}>{row.notes}</td>
+                           <td style={{...styles.td, whiteSpace: 'nowrap', fontWeight: 600}}>{row.marketer}</td>
                          </tr>
                        ))
                     )}
@@ -1037,15 +867,30 @@ export default function App() {
         {/* --- TAB 2: MARKETERS PAGE --- */}
         {activeTab === 'marketers' && (
            <div>
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px'}}>
-                 <h2 style={{fontSize:'18px', margin:0, color: isDark?'white':'#333', fontWeight: 700}}>Marketers Performance</h2>
-                 <div style={{display:'flex', gap:'10px', flexWrap: 'wrap'}}>
-                    <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px'}}>
+              <div style={{display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '20px', gap: '15px'}}>
+                 <h2 style={{fontSize: isMobile ? '16px' : '18px', margin:0, color: isDark?'white':'#333', fontWeight: 700}}>Marketers Performance</h2>
+                 
+                 <div style={{display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:'10px', width: isMobile ? '100%' : 'auto', alignItems: 'center'}}>
+                    {/* Search Marketer */}
+                    <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 100%' : '1 1 200px', minWidth: '150px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', width: isMobile ? '100%' : 'auto'}}>
                        <SearchIcon size={16} color="#9ca3af"/>
-                       <input placeholder="Cari Marketer..." value={marketerSearchQuery} onChange={(e) => setMarketerSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'8px', outline:'none', color: isDark?'white':'black', width:'130px', fontSize: '13px'}} />
+                       <input placeholder="Cari Marketer..." value={marketerSearchQuery} onChange={(e) => setMarketerSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '13px'}} />
                     </div>
-                    <input type="date" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} style={{...styles.input, padding:'8px', width:'130px'}} title="Start Date"/>
-                    <input type="date" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} style={{...styles.input, padding:'8px', width:'130px'}} title="End Date"/>
+                    
+                    {/* Wrapper untuk Date Range agar tetap berdampingan/proporsional */}
+                    <div style={{display: 'flex', gap: '10px', width: isMobile ? '100%' : 'auto'}}>
+                       {/* Date Range Start */}
+                       <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                          <span style={{fontSize:'12px', color:'#9ca3af', marginRight:'5px'}}>Start:</span>
+                          <input type="date" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', fontFamily: 'inherit', width: '100%'}} />
+                       </div>
+
+                       {/* Date Range End */}
+                       <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                          <span style={{fontSize:'12px', color:'#9ca3af', marginRight:'5px'}}>End:</span>
+                          <input type="date" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', fontFamily: 'inherit', width: '100%'}} />
+                       </div>
+                    </div>
                  </div>
               </div>
               
@@ -1053,29 +898,29 @@ export default function App() {
                 <table style={styles.table}>
                    <thead>
                      <tr>
-                       <th style={styles.th}>Marketer Name</th>
-                       <th style={styles.th}>Total Leads</th>
-                       <th style={styles.th}>Direct Asks</th>
-                       <th style={styles.th}>Deals / Signed</th>
-                       <th style={styles.th}>Conversion Rate</th>
-                       <th style={styles.th}>Status</th>
-                       <th style={styles.th}>Last Update</th>
+                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Marketer Name</th>
+                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Total Leads</th>
+                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Direct Asks</th>
+                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Deals / Signed</th>
+                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Conversion Rate</th>
+                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Status</th>
+                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Last Update</th>
                      </tr>
                    </thead>
                    <tbody>
                      {marketersStatsList.map((m, idx) => (
                        <tr key={idx}>
-                         <td style={{...styles.td, fontWeight:600}}>{m.name}</td>
+                         <td style={{...styles.td, fontWeight:600, whiteSpace: 'nowrap'}}>{m.name}</td>
                          <td style={styles.td}>{m.totalLeads}</td>
                          <td style={styles.td}>{m.directAsks}</td>
                          <td style={styles.td}>{m.deals}</td>
                          <td style={{...styles.td, color: '#d97706', fontWeight: 700}}>{m.conversionRate}%</td>
                          <td style={styles.td}>
-                            <span style={{padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, backgroundColor: m.status === 'Active' ? '#dcfce7' : '#fee2e2', color: m.status === 'Active' ? '#16a34a' : '#ef4444'}}>
+                            <span style={{display: 'inline-block', whiteSpace: 'nowrap', padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, backgroundColor: m.status === 'Active' ? '#dcfce7' : '#fee2e2', color: m.status === 'Active' ? '#16a34a' : '#ef4444'}}>
                                {m.status}
                             </span>
                          </td>
-                         <td style={{...styles.td, fontSize: '12px', color: '#6b7280'}}>{m.lastUpdate || '-'}</td>
+                         <td style={{...styles.td, fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap'}}>{m.lastUpdate || '-'}</td>
                        </tr>
                      ))}
                      {marketersStatsList.length === 0 && (
@@ -1090,23 +935,24 @@ export default function App() {
         {/* --- TAB 3: INFLUENCER --- */}
         {activeTab === 'influencer' && (
            <div>
-              <h2 style={{fontSize:'18px', marginBottom:'15px', color: isDark?'white':'#333', fontWeight: 700}}>Influencer / Source Performance (All Time)</h2>
+              <h2 style={{fontSize: isMobile ? '16px' : '18px', marginBottom:'15px', color: isDark?'white':'#333', fontWeight: 700}}>Influencer / Source Performance (All Time)</h2>
               <div style={{overflowX: 'auto', border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: '12px'}}>
                 <table style={styles.table}>
                    <thead>
                      <tr>
-                       <th style={styles.th}>Source / Post Name</th>
-                       <th style={styles.th}>Total Leads Generated</th>
-                       <th style={styles.th}>Performance Rating</th>
+                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Source / Post Name</th>
+                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Total Leads Generated</th>
+                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Performance Rating</th>
                      </tr>
                    </thead>
                    <tbody>
                      {globalKpiStats.postPerformance?.map((item, idx) => (
                        <tr key={idx}>
-                         <td style={styles.td}>{item.source}</td>
+                         <td style={{...styles.td, whiteSpace: 'nowrap'}}>{item.source}</td>
                          <td style={{...styles.td, fontSize:'16px', fontWeight:'bold'}}>{item.count}</td>
                          <td style={styles.td}>
                             <span style={{
+                               display: 'inline-block', whiteSpace: 'nowrap',
                                padding:'4px 10px', borderRadius:'12px', fontSize:'12px', fontWeight:700,
                                backgroundColor: item.rating==='Excellent' ? '#dcfce7' : (item.rating==='Good' ? '#dbeafe' : '#fef9c3'),
                                color: item.rating==='Excellent' ? '#166534' : (item.rating==='Good' ? '#1e40af' : '#854d0e')
@@ -1149,29 +995,17 @@ export default function App() {
 
       </div>
 
-      {/* MODAL ADD/EDIT LEAD */}
-      <AnimatedModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} styles={styles}>
-         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'24px', alignItems: 'center'}}>
-            <h2 style={{margin:0, fontSize:'20px', fontWeight: 700, color: isDark?'white':'#1f2937'}}>
-               {editingLead ? 'Edit Lead' : 'Add New Lead'}
-            </h2>
-            <button onClick={() => setIsModalOpen(false)} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af', padding: '4px'}}>
-              <X size={24}/>
-            </button>
-         </div>
-         <AddLeadForm styles={styles} initialData={editingLead} onSubmit={handleFormSubmit} />
-      </AnimatedModal>
-
     </div>
   );
 }
 
 // --- PIN MODAL COMPONENT ---
+// Anda dapat memisahkan ini nanti ke src/components/ui/PinModal.tsx jika Anda mau
 const PinModal = ({ isOpen, onClose, onSubmit, isDark, styles }: any) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pin === SECURITY_PIN) {
       onSubmit(); setPin(''); setError(''); onClose();
@@ -1198,126 +1032,3 @@ const PinModal = ({ isOpen, onClose, onSubmit, isDark, styles }: any) => {
     </AnimatedModal>
   );
 };
-
-// --- FORM COMPONENT ---
-function AddLeadForm({ styles, initialData, onSubmit }: { styles: any, initialData: DailyLog | null, onSubmit: (data: any) => void }) {
-  const [formData, setFormData] = useState({
-    rowNumber: 0, 
-    rawDateIso: new Date().toISOString().slice(0, 10), 
-    name: '', url: '', industry: 'IT/Tech', source: '', 
-    template: 'ATS Story', interactionType: 'Direct Ask', 
-    tagged: true, notes: '', marketer: '', status: 'New', responseTime: '-',
-    email: '', approvalStatus: 'None'
-  });
-
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        rowNumber: initialData.rowNumber,
-        rawDateIso: initialData.rawDateIso || new Date().toISOString().slice(0, 10),
-        name: initialData.leadName, url: initialData.profileUrl, industry: initialData.industry,
-        source: initialData.source, template: initialData.template, interactionType: initialData.interactionType,
-        tagged: initialData.tagged, notes: initialData.notes, marketer: initialData.marketer,
-        status: initialData.status, responseTime: initialData.responseTime,
-        email: initialData.email, approvalStatus: initialData.approvalStatus
-      });
-    } else {
-      const savedMarketer = localStorage.getItem('savedMarketerName');
-      if (savedMarketer) {
-         setFormData(prev => ({ ...prev, marketer: savedMarketer }));
-      }
-    }
-  }, [initialData]);
-
-  const handleChange = (e: any) => {
-    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    setFormData({...formData, [e.target.name]: value});
-  };
-
-  const handleSubmit = (e: any) => {
-    e.preventDefault();
-    if (formData.marketer) {
-       localStorage.setItem('savedMarketerName', formData.marketer);
-    }
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} style={{display:'flex', flexDirection:'column', gap:'16px'}}>
-       <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-         <div>
-           <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Tanggal</label>
-           <input required type="date" name="rawDateIso" value={formData.rawDateIso} onChange={handleChange} style={styles.input} />
-         </div>
-         <div>
-            <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Marketer Name</label>
-            <input required name="marketer" value={formData.marketer} onChange={handleChange} style={styles.input} placeholder="Your Name" />
-         </div>
-       </div>
-
-       <div>
-         <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Lead Name</label>
-         <input required name="name" value={formData.name} onChange={handleChange} style={styles.input} placeholder="e.g. John Doe" />
-       </div>
-       <div>
-         <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Bukti Google Drive (Link)</label>
-         <input required type="url" name="url" value={formData.url} onChange={handleChange} style={styles.input} placeholder="https://drive.google.com/..." />
-       </div>
-       
-       <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-         <div>
-           <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Industry</label>
-           <input name="industry" value={formData.industry} onChange={handleChange} style={styles.input} placeholder="IT, Finance..." />
-         </div>
-         <div>
-           <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Source / Post</label>
-           <input name="source" placeholder="e.g. Viral Post #1" value={formData.source} onChange={handleChange} style={styles.input} />
-         </div>
-       </div>
-       
-       <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-         <div>
-            <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Type</label>
-            <select name="interactionType" value={formData.interactionType} onChange={handleChange} style={styles.input}>
-               <option>Direct Ask</option>
-               <option>Offered</option>
-            </select>
-         </div>
-         {initialData && (
-            <div>
-              <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Status</label>
-              <select name="status" value={formData.status} onChange={handleChange} style={styles.input}>
-                 <option>New</option>
-                 <option>In Progress</option>
-                 <option>Deal/Signed</option>
-                 <option>Closed/Lost</option>
-              </select>
-           </div>
-         )}
-       </div>
-
-       {initialData && (
-          <div>
-            <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Lead Email</label>
-            <input type="email" name="email" value={formData.email} onChange={handleChange} style={styles.input} placeholder="Belum ada email dari marketer" />
-          </div>
-       )}
-
-       <div style={{display: 'flex', alignItems: 'center'}}>
-          <label style={{display:'flex', alignItems:'center', gap: '8px', cursor: 'pointer', fontSize:'13px', color: '#374151', fontWeight: 500}}>
-            <input type="checkbox" name="tagged" checked={formData.tagged} onChange={handleChange} style={{width: '16px', height: '16px'}} />
-            Tagged in comments?
-          </label>
-       </div>
-       
-       <div>
-         <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Notes</label>
-         <textarea name="notes" value={formData.notes} onChange={handleChange} style={{...styles.input, height:'60px', fontFamily: 'inherit'}} placeholder="Any additional details..." />
-       </div>
-       
-       <button type="submit" style={{...styles.btnPrimary, justifyContent:'center', marginTop:'8px', padding: '12px'}}>
-         {initialData ? 'Update Lead' : 'Save Lead'}
-       </button>
-    </form>
-  );
-}
