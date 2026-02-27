@@ -1226,4 +1226,4 @@ const PinModal = ({ isOpen, onClose, onSubmit, isDark, styles }: any) => {
        </form>
     </AnimatedModal>
   );
-};
+}; // test commit
