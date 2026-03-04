@@ -237,7 +237,7 @@ export default function App() {
      setCurrentPage(1);
   }, [searchQuery, dateRange, marketerFilter, activeTab, itemsPerPage]);
 
-  // --- DYNAMIC KPIs (Admin Dashboard - PDF Point #2) ---
+  // --- DYNAMIC KPIs (Admin Dashboard) ---
   const adminKpiStats = useMemo(() => {
     let total = 0, pending = 0, approved = 0, declined = 0;
     dailyLogs.forEach(log => {
@@ -800,7 +800,7 @@ export default function App() {
                </div>
             </div>
 
-            {/* --- ADMIN DASHBOARD KPIs (PDF Nomor 2) --- */}
+            {/* --- ADMIN DASHBOARD KPIs --- */}
             {activeTab === 'admin' && (
               <div style={{display:'grid', gridTemplateColumns: isMobile?'1fr 1fr':'repeat(4, 1fr)', gap:'15px', marginBottom: '20px'}}>
                  <div style={{...styles.card, padding: '15px'}}>
@@ -1077,7 +1077,7 @@ export default function App() {
   );
 }
 
-// --- KOMPONEN INLINE BARU: MENGGANTIKAN AddLeadForm.tsx YANG BENTROK ---
+// --- KOMPONEN INLINE BARU ---
 const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: any) => {
   const [formData, setFormData] = useState<any>({});
 
@@ -1103,6 +1103,9 @@ const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: 
 
   const handleChange = (e: any) => {
     const { name, value, type, checked } = e.target;
+    // Mengunci agar jika bukan admin edit, status tidak bisa diubah-ubah nilainya
+    if (!initialData && name === 'status') return;
+
     setFormData((prev: any) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -1125,10 +1128,15 @@ const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: 
           <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Lead Name</label>
           <input type="text" name="name" value={formData.name || ''} onChange={handleChange} required style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
         </div>
-        <div>
-          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Lead Email</label>
-          <input type="email" name="email" value={formData.email || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
-        </div>
+        
+        {/* Hanya dimunculkan saat ADMIN SEDANG EDIT, Untuk Lead Baru Kolom Ini Dihilangkan */}
+        {initialData && (
+          <div>
+            <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Lead Email</label>
+            <input type="email" name="email" value={formData.email || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+          </div>
+        )}
+
         <div>
           <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Bukti / Profile URL</label>
           <input type="text" name="url" value={formData.url || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
@@ -1160,12 +1168,29 @@ const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: 
         </div>
         <div>
           <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Status Conversion</label>
-          <select name="status" value={formData.status || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}}>
-            <option value="New">New</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Deal / Signed">Deal / Signed</option>
-            <option value="Drop">Drop</option>
-          </select>
+          {initialData ? (
+            <select name="status" value={formData.status || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}}>
+              <option value="New">New</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Deal / Signed">Deal / Signed</option>
+              <option value="Drop">Drop</option>
+            </select>
+          ) : (
+            <input 
+              type="text" 
+              name="status" 
+              value="New" 
+              readOnly 
+              style={{
+                ...styles.input, 
+                width: '100%', 
+                boxSizing: 'border-box',
+                backgroundColor: isDark ? '#374151' : '#f3f4f6',
+                color: isDark ? '#9ca3af' : '#6b7280',
+                cursor: 'not-allowed'
+              }} 
+            />
+          )}
         </div>
       </div>
       
@@ -1226,4 +1251,4 @@ const PinModal = ({ isOpen, onClose, onSubmit, isDark, styles }: any) => {
        </form>
     </AnimatedModal>
   );
-}; // test commit
+};
