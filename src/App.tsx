@@ -210,7 +210,7 @@ export default function App() {
       const matchName = log.leadName.toLowerCase().includes(searchQuery.toLowerCase());
       const matchMarketer = marketerFilter ? log.marketer === marketerFilter : true;
       
-      const matchPending = activeTab === 'admin' ? log.approvalStatus === 'Pending' : true; 
+      const matchPending = activeTab === 'admin' ? (log.approvalStatus === 'Pending' && !!log.email) : true; 
 
       return matchDate && matchName && matchMarketer && matchPending;
     });
@@ -254,7 +254,7 @@ export default function App() {
       // 2. Count if it matches the current filters
       if (matchDate && matchMarketer && matchName) {
          total++;
-         if (log.approvalStatus === 'Pending') pending++;
+         if (log.approvalStatus === 'Pending' && log.email) pending++;
          else if (log.approvalStatus === 'Approved') approved++;
          else if (log.approvalStatus === 'Declined') declined++;
       }
@@ -410,7 +410,8 @@ export default function App() {
       performActionSilently('edit', { ...data, rowNumber: editingLead.rowNumber }, 'Edit terkonfirmasi. Data berhasil diperbarui.');
       setEditingLead(null);
     } else {
-      performActionSilently('create', { ...data, approvalStatus: 'Pending' }, 'Data baru berhasil ditambahkan.');
+      // FIX: Jangan otomatis auto-request approval, biarkan marketer yang klik tombol nanti.
+      performActionSilently('create', { ...data, approvalStatus: 'None' }, 'Data baru berhasil ditambahkan.');
     }
   };
 
@@ -866,7 +867,7 @@ export default function App() {
                                  </div>
                               ) : (
                                  row.status === 'New' ? (
-                                    row.approvalStatus === 'Pending' ? (
+                                    (row.approvalStatus === 'Pending' && row.email) ? (
                                        <span style={{color: '#d97706', fontSize: '12px', fontWeight: 600, display: 'inline-block', whiteSpace: 'nowrap'}}>Pending...</span>
                                     ) : row.approvalStatus === 'Declined' ? (
                                        <div style={{display:'flex', flexDirection: 'column', gap:'4px'}}>
