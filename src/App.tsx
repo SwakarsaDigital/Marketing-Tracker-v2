@@ -1,24 +1,16 @@
 import React, { useEffect, useState, useMemo } from 'react';
-
-// --- IMPORTS DARI FILE YANG SUDAH DIPISAH ---
-import { LXStyles } from './styles/lxStyles';
 import { 
-  FileText, Users, BarChart2, RefreshCw, LinkIcon, X, 
-  SearchIcon, CheckSquare, Shield, Lock, Download, Edit, Trash2, MenuIcon, 
-  TrendingUp
-} from './components/icons/icons';
-import { FullScreenLoader } from './components/ui/FullScreenLoader';
-import { AnimatedModal } from './components/ui/AnimatedModal';
-import { NotificationToast } from './components/ui/NotificationToast';
-import { ConfirmModal } from './components/ui/ConfirmModal';
-import { SearchableDropdown } from './components/ui/SearchableDropdown';
+  FileText, Users, BarChart2, RefreshCw, Link as LinkIcon, X, 
+  Search as SearchIcon, CheckSquare, Shield, Lock, Download, Edit, Trash2, Menu as MenuIcon, 
+  TrendingUp, AlertCircle, CheckCircle2 
+} from 'lucide-react';
 
 // --- CONFIGURATION ---
 // URL Google Apps Script Anda
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx0TaLAHHMxE3JANtOYcmhQIZxxHsBXLkoGFAqr4Fdy8M6_SIWScP8o90cFRsTS9l2r/exec";
 const SECURITY_PIN = "Yoyomagey1@"; 
 
-// --- TYPES ---
+// --- TYPES & INTERFACES ---
 export interface DailyLog {
   id: number;
   rowNumber: number; 
@@ -43,6 +35,224 @@ export interface NotificationState {
   message: string;
   type: 'success' | 'error' | 'info';
 }
+
+// --- INLINE STYLES (Menggantikan lxStyles.ts) ---
+const LXStyles = (isDark: boolean, isMobile: boolean) => ({
+  container: { 
+    backgroundColor: isDark ? '#111827' : '#f9fafb', 
+    minHeight: '100vh', 
+    fontFamily: 'system-ui, -apple-system, sans-serif', 
+    color: isDark ? '#f3f4f6' : '#111827' 
+  },
+  header: { 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: '16px 24px', 
+    backgroundColor: isDark ? '#1f2937' : '#166534', 
+    color: 'white',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+  },
+  tabBar: { 
+    display: isMobile ? 'none' : 'flex', 
+    backgroundColor: isDark ? '#374151' : 'white', 
+    borderBottom: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb', 
+    padding: '0 24px',
+    overflowX: 'auto' as const
+  },
+  tab: (active: boolean) => ({ 
+    padding: '12px 16px', 
+    cursor: 'pointer', 
+    borderBottom: active ? '2px solid #16a34a' : '2px solid transparent', 
+    color: active ? (isDark ? '#4ade80' : '#16a34a') : (isDark ? '#9ca3af' : '#6b7280'), 
+    fontWeight: active ? 600 : 500, 
+    display: 'flex', 
+    alignItems: 'center', 
+    gap: '8px',
+    whiteSpace: 'nowrap' as const
+  }),
+  content: { 
+    padding: '24px',
+    maxWidth: '1400px',
+    margin: '0 auto'
+  },
+  card: { 
+    backgroundColor: isDark ? '#1f2937' : 'white', 
+    borderRadius: '12px', 
+    padding: '20px', 
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    border: isDark ? '1px solid #374151' : '1px solid #e5e7eb'
+  },
+  table: { 
+    width: '100%', 
+    borderCollapse: 'collapse' as const, 
+    fontSize: '13px' 
+  },
+  th: { 
+    textAlign: 'left' as const, 
+    padding: '12px 16px', 
+    borderBottom: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb', 
+    backgroundColor: isDark ? '#374151' : '#f3f4f6', 
+    color: isDark ? '#d1d5db' : '#374151', 
+    fontWeight: 600,
+    whiteSpace: 'nowrap' as const
+  },
+  td: { 
+    padding: '12px 16px', 
+    borderBottom: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb', 
+    color: isDark ? '#f3f4f6' : '#1f2937' 
+  },
+  input: { 
+    padding: '10px 12px', 
+    borderRadius: '8px', 
+    border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', 
+    backgroundColor: isDark ? '#374151' : 'white', 
+    color: isDark ? 'white' : 'black', 
+    outline: 'none',
+    fontFamily: 'inherit',
+    transition: 'border-color 0.2s'
+  },
+  btnPrimary: { 
+    display: 'flex', 
+    alignItems: 'center', 
+    gap: '8px', 
+    padding: '10px 16px', 
+    borderRadius: '8px', 
+    backgroundColor: '#16a34a', 
+    color: 'white', 
+    border: 'none', 
+    cursor: 'pointer', 
+    fontWeight: 600,
+    transition: 'background-color 0.2s'
+  },
+  actionBtn: { 
+    border: 'none', 
+    cursor: 'pointer', 
+    borderRadius: '6px', 
+    padding: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'opacity 0.2s'
+  }
+});
+
+// --- INLINE UI COMPONENTS ---
+
+const FullScreenLoader = ({ isOpen, isDark }: { isOpen: boolean, isDark: boolean }) => {
+  if (!isOpen) return null;
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, 
+      backgroundColor: isDark ? 'rgba(17, 24, 39, 0.8)' : 'rgba(255, 255, 255, 0.8)', 
+      zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center',
+      backdropFilter: 'blur(4px)'
+    }}>
+      <div className="spin" style={{
+        width: '48px', height: '48px', 
+        border: '4px solid #16a34a', borderTopColor: 'transparent', borderRadius: '50%'
+      }}></div>
+    </div>
+  );
+};
+
+const AnimatedModal = ({ isOpen, onClose, children, styles, contentStyle }: any) => {
+  if (!isOpen) return null;
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', 
+      zIndex: 999, display: 'flex', justifyContent: 'center', alignItems: 'center',
+      animation: 'fadeIn 0.2s ease-out', padding: '20px'
+    }} onClick={onClose}>
+      <div style={{
+        backgroundColor: styles.card.backgroundColor, 
+        padding: '24px', borderRadius: '12px', 
+        maxHeight: '90vh', overflowY: 'auto',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        animation: 'scaleIn 0.2s ease-out',
+        ...contentStyle
+      }} onClick={e => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const NotificationToast = ({ notification, onClose }: { notification: NotificationState, onClose: () => void }) => {
+  useEffect(() => { 
+    const timer = setTimeout(onClose, 3500); 
+    return () => clearTimeout(timer); 
+  }, [notification, onClose]);
+
+  const isError = notification.type === 'error';
+  
+  return (
+    <div style={{
+      position: 'fixed', bottom: '24px', right: '24px', 
+      backgroundColor: isError ? '#ef4444' : '#16a34a', color: 'white', 
+      padding: '16px 24px', borderRadius: '8px', zIndex: 10000, 
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+      display: 'flex', alignItems: 'center', gap: '12px',
+      animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+    }}>
+      {isError ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
+      <span style={{fontWeight: 500, fontSize: '14px'}}>{notification.message}</span>
+      <button onClick={onClose} style={{background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', padding: '0', marginLeft: '12px', display: 'flex'}}>
+        <X size={16} />
+      </button>
+    </div>
+  );
+};
+
+const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText, confirmColor, icon, isDark, styles }: any) => {
+  if (!isOpen) return null;
+  return (
+    <AnimatedModal isOpen={isOpen} onClose={onClose} styles={styles} contentStyle={{width: '400px', maxWidth: '100%'}}>
+      <div style={{display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '24px'}}>
+        <div style={{
+          backgroundColor: icon === 'alert' ? (isDark ? '#7f1d1d' : '#fee2e2') : (isDark ? '#14532d' : '#dcfce7'),
+          color: icon === 'alert' ? '#ef4444' : '#16a34a',
+          padding: '10px', borderRadius: '50%', display: 'flex'
+        }}>
+          {icon === 'alert' ? <AlertCircle size={24} /> : <CheckCircle2 size={24} />}
+        </div>
+        <div>
+          <h3 style={{marginTop: 0, marginBottom: '8px', color: isDark ? 'white' : '#111827', fontSize: '18px'}}>{title}</h3>
+          <div style={{fontSize: '14px', color: isDark ? '#9ca3af' : '#4b5563', lineHeight: 1.5}}>{message}</div>
+        </div>
+      </div>
+      <div style={{display: 'flex', justifyContent: 'flex-end', gap: '12px'}}>
+        <button onClick={onClose} style={{padding: '10px 16px', borderRadius: '8px', border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#374151', cursor: 'pointer', fontWeight: 500}}>Batal</button>
+        <button onClick={() => { onConfirm(); onClose(); }} style={{padding: '10px 16px', borderRadius: '8px', border: 'none', background: confirmColor, color: 'white', cursor: 'pointer', fontWeight: 600}}>{confirmText}</button>
+      </div>
+    </AnimatedModal>
+  );
+};
+
+const SearchableDropdown = ({ value, onChange, options, placeholder, isDark }: any) => {
+  return (
+    <div style={{position: 'relative', width: '100%'}}>
+      <select 
+        value={value} 
+        onChange={e => onChange(e.target.value)} 
+        style={{
+          padding: '10px 12px', borderRadius: '8px', 
+          border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', 
+          backgroundColor: isDark ? '#374151' : 'white', 
+          color: isDark ? 'white' : 'black', 
+          width: '100%', outline: 'none', appearance: 'none',
+          fontFamily: 'inherit', fontSize: '13px'
+        }}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
+      </select>
+      <div style={{position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: isDark ? '#9ca3af' : '#6b7280'}}>
+        <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+      </div>
+    </div>
+  );
+};
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
@@ -70,6 +280,10 @@ export default function App() {
   // Approval Modal
   const [approvalModalLead, setApprovalModalLead] = useState<DailyLog | null>(null);
   const [approvalEmail, setApprovalEmail] = useState('');
+
+  // Decline Modal (Reason)
+  const [declineModalLead, setDeclineModalLead] = useState<DailyLog | null>(null);
+  const [declineReason, setDeclineReason] = useState('');
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -178,7 +392,7 @@ export default function App() {
             responseTime: getValue("Response Time", 8) || '-',
             status: getValue("Conversion Status", 9) || 'New',
             notes: getValue("Notes/Feedback", 10) || '',
-            marketer: getValue("Marketer", 11) || '',
+            marketer: getValue("Marketer", 11) || '', // Now treated as Email
             email: getValue("Email", 12) || '',
             approvalStatus: getValue("Approval Status", 13) || 'None'
           };
@@ -354,7 +568,7 @@ export default function App() {
       return;
     }
     
-    const headers = ['Date', 'Lead Name', 'Industry', 'Source', 'Template', 'Type', 'Tagged', 'Response Time', 'Status', 'Notes', 'Marketer', 'Lead Email', 'Approval Status'];
+    const headers = ['Date', 'Lead Name', 'Industry', 'Source', 'Template', 'Type', 'Tagged', 'Response Time', 'Status', 'Notes', 'Marketer Email', 'Lead Email', 'Approval Status'];
     const csvRows = [headers.join(',')];
 
     filteredLogs.forEach(row => {
@@ -410,7 +624,6 @@ export default function App() {
       performActionSilently('edit', { ...data, rowNumber: editingLead.rowNumber }, 'Edit terkonfirmasi. Data berhasil diperbarui.');
       setEditingLead(null);
     } else {
-      // FIX: Jangan otomatis auto-request approval, biarkan marketer yang klik tombol nanti.
       performActionSilently('create', { ...data, approvalStatus: 'None' }, 'Data baru berhasil ditambahkan.');
     }
   };
@@ -468,7 +681,7 @@ export default function App() {
       message: (
          <div style={{ textAlign: 'left', backgroundColor: isDark ? '#374151' : '#f3f4f6', padding: '16px', borderRadius: '8px', marginTop: '10px' }}>
             <div style={{marginBottom: '6px', fontSize: '13px'}}>Nama Lead: <span style={{fontWeight: 600, color: isDark?'white':'black'}}>{lead.leadName}</span></div>
-            <div style={{marginBottom: '6px', fontSize: '13px'}}>Marketer: <span style={{fontWeight: 600, color: isDark?'white':'black'}}>{lead.marketer}</span></div>
+            <div style={{marginBottom: '6px', fontSize: '13px'}}>Marketer Email: <span style={{fontWeight: 600, color: isDark?'white':'black'}}>{lead.marketer}</span></div>
             <div style={{marginBottom: '12px', fontSize: '13px'}}>Lead Email: <span style={{fontWeight: 700, color: '#0284c7'}}>{lead.email || '- Belum diisi -'}</span></div>
             <div style={{fontSize: '11px', color: isDark ? '#9ca3af' : '#6b7280', borderTop: isDark?'1px solid #4b5563':'1px solid #e5e7eb', paddingTop: '8px', lineHeight: 1.4}}>
                Jika disetujui, status otomatis berubah menjadi "In Progress".
@@ -483,15 +696,8 @@ export default function App() {
   };
 
   const handleDeclineClick = (lead: DailyLog) => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Decline Approval',
-      message: <>Tolak request approval untuk <b>{lead.leadName}</b>? Data akan dikembalikan ke Marketer.</>,
-      confirmText: 'Ya, Tolak',
-      confirmColor: '#ef4444',
-      icon: 'alert',
-      onConfirm: () => handleAdminApprovalAction(lead, 'Decline')
-    });
+    setDeclineModalLead(lead);
+    setDeclineReason('');
   };
 
   // --- APPROVAL LOGIC ---
@@ -530,14 +736,15 @@ export default function App() {
     await performActionSilently('edit', dataToUpdate, `Request Approval dikirim untuk ${leadToUpdate.leadName}`);
   };
 
-  const handleAdminApprovalAction = async (lead: DailyLog, actionType: 'Approve' | 'Decline') => {
+  const handleAdminApprovalAction = async (lead: DailyLog, actionType: 'Approve' | 'Decline', reason?: string) => {
     if (!isAdmin) return;
 
     const newApprovalStatus = actionType === 'Approve' ? 'Approved' : 'Declined';
     const newStatus = actionType === 'Approve' ? 'In Progress' : lead.status;
+    const updatedNotes = actionType === 'Decline' && reason ? `[DITOLAK: ${reason}]\n${lead.notes}` : lead.notes;
 
     setDailyLogs(prevLogs => prevLogs.map(l => 
-       l.id === lead.id ? { ...l, approvalStatus: newApprovalStatus, status: newStatus } : l
+       l.id === lead.id ? { ...l, approvalStatus: newApprovalStatus, status: newStatus, notes: updatedNotes } : l
     ));
 
     const dataToUpdate = {
@@ -552,10 +759,11 @@ export default function App() {
        tagged: lead.tagged,
        responseTime: lead.responseTime,
        status: newStatus,
-       notes: lead.notes,
+       notes: updatedNotes,
        marketer: lead.marketer,
        email: lead.email,
-       approvalStatus: newApprovalStatus
+       approvalStatus: newApprovalStatus,
+       declineReason: reason || '' // Bisa ditangkap oleh GAS jika diset up untuk kirim email notif
     };
 
     await performActionSilently('edit', dataToUpdate, `${actionType} sukses untuk ${lead.leadName}.`);
@@ -575,8 +783,8 @@ export default function App() {
         @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(50px); opacity: 0; } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-        @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        @keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.9); opacity: 0; } }
+        @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.95); opacity: 0; } }
         @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -608,23 +816,21 @@ export default function App() {
          styles={styles} 
       />
 
-      {/* --- ADD / EDIT LEAD MODAL INLINE (Penyelesaian Crash) --- */}
+      {/* --- ADD / EDIT LEAD MODAL INLINE --- */}
       <AnimatedModal 
         isOpen={isModalOpen} 
         onClose={() => { setIsModalOpen(false); setEditingLead(null); }} 
-        title={editingLead ? 'Edit Lead' : 'New Lead'}
         styles={styles} 
         contentStyle={{ width: '600px', maxWidth: '95vw' }}
       >
-         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'16px'}}>
-            <h3 style={{margin:0, color: isDark?'white':'#1f2937', fontSize: '18px'}}>
+         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'20px'}}>
+            <h3 style={{margin:0, color: isDark?'white':'#1f2937', fontSize: '20px', fontWeight: 700}}>
               {editingLead ? 'Edit Lead' : 'New Lead'}
             </h3>
-            <button onClick={() => { setIsModalOpen(false); setEditingLead(null); }} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af'}}>
-              <X size={20}/>
+            <button onClick={() => { setIsModalOpen(false); setEditingLead(null); }} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af', display: 'flex'}}>
+              <X size={24}/>
             </button>
          </div>
-         {/* Form Custom Inline yang formatnya sesuai dengan data Google Apps Script (Mencegah Layar Hitam) */}
          <InlineAddEditForm 
             initialData={editingLead}
             onSubmit={handleFormSubmit}
@@ -638,7 +844,7 @@ export default function App() {
       <AnimatedModal isOpen={!!approvalModalLead} onClose={() => setApprovalModalLead(null)} styles={styles} contentStyle={{ width: '380px' }}>
          <div style={{display:'flex', justifyContent:'space-between', marginBottom:'16px'}}>
             <h3 style={{margin:0, color: isDark?'white':'#1f2937', fontSize: '18px'}}>Request Approval</h3>
-            <button onClick={() => setApprovalModalLead(null)} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af'}}><X size={20}/></button>
+            <button onClick={() => setApprovalModalLead(null)} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af', display: 'flex'}}><X size={20}/></button>
          </div>
          <p style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '16px'}}>
             Masukkan <b>Lead Email</b> untuk mendaftarkan <b>{approvalModalLead?.leadName}</b>
@@ -648,9 +854,33 @@ export default function App() {
               type="email" required autoFocus
               value={approvalEmail} onChange={(e) => setApprovalEmail(e.target.value)}
               placeholder="lead.email@example.com"
-              style={{...styles.input, marginBottom: '20px'}} 
+              style={{...styles.input, marginBottom: '20px', width: '100%', boxSizing: 'border-box'}} 
             />
             <button type="submit" style={{...styles.btnPrimary, width: '100%', justifyContent: 'center'}}>Kirim Request</button>
+         </form>
+      </AnimatedModal>
+
+      {/* DECLINE APPROVAL MODAL DENGAN ALASAN */}
+      <AnimatedModal isOpen={!!declineModalLead} onClose={() => setDeclineModalLead(null)} styles={styles} contentStyle={{ width: '400px' }}>
+         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'16px'}}>
+            <h3 style={{margin:0, color: isDark?'white':'#1f2937', fontSize: '18px'}}>Tolak Request</h3>
+            <button onClick={() => setDeclineModalLead(null)} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af', display: 'flex'}}><X size={20}/></button>
+         </div>
+         <p style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '16px'}}>
+            Tolak request approval untuk <b>{declineModalLead?.leadName}</b>? Data akan dikembalikan ke Marketer. Berikan alasan penolakan agar marketer tahu:
+         </p>
+         <form onSubmit={(e) => {
+            e.preventDefault();
+            if (declineModalLead) handleAdminApprovalAction(declineModalLead, 'Decline', declineReason);
+            setDeclineModalLead(null);
+         }}>
+            <textarea
+              required autoFocus
+              value={declineReason} onChange={(e) => setDeclineReason(e.target.value)}
+              placeholder="Tulis alasan penolakan..."
+              style={{...styles.input, marginBottom: '20px', width: '100%', height: '80px', resize: 'none', boxSizing: 'border-box'}}
+            />
+            <button type="submit" style={{...styles.btnPrimary, backgroundColor: '#ef4444', width: '100%', justifyContent: 'center'}}>Tolak & Beri Alasan</button>
          </form>
       </AnimatedModal>
 
@@ -662,31 +892,31 @@ export default function App() {
           animation: 'fadeIn 0.2s ease-out forwards'
         }} onClick={() => setIsMobileMenuOpen(false)}>
            <div style={{
-              width: '260px', height: '100%', backgroundColor: isDark ? '#1f2937' : '#fff',
-              padding: '20px 0', display: 'flex', flexDirection: 'column',
+              width: '280px', height: '100%', backgroundColor: isDark ? '#1f2937' : '#fff',
+              padding: '24px 0', display: 'flex', flexDirection: 'column',
               animation: 'slideInLeft 0.3s forwards', boxShadow: '2px 0 10px rgba(0,0,0,0.2)'
            }} onClick={e => e.stopPropagation()}>
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', marginBottom: '20px'}}>
-                 <h2 style={{margin: 0, color: isDark ? '#fff' : '#166534', fontSize: '18px', fontWeight: 700}}>Menu</h2>
-                 <button onClick={() => setIsMobileMenuOpen(false)} style={{background:'none', border:'none', color: isDark?'#fff':'#000', cursor:'pointer'}}><X size={24}/></button>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 24px', marginBottom: '24px'}}>
+                 <h2 style={{margin: 0, color: isDark ? '#fff' : '#166534', fontSize: '20px', fontWeight: 700}}>Menu Utama</h2>
+                 <button onClick={() => setIsMobileMenuOpen(false)} style={{background:'none', border:'none', color: isDark?'#fff':'#000', cursor:'pointer', display: 'flex'}}><X size={24}/></button>
               </div>
               
-              <div style={{display:'flex', flexDirection:'column', gap:'5px', padding: '0 10px'}}>
+              <div style={{display:'flex', flexDirection:'column', gap:'8px', padding: '0 16px'}}>
                 <button onClick={() => switchTabMobile('daily')} style={{...styles.tab(activeTab === 'daily'), borderRadius:'8px', border:'none', background: activeTab==='daily' ? (isDark?'#374151':'#f0fdf4') : 'transparent'}}>
-                  <FileText size={18} /> Daily Log
+                  <FileText size={20} /> Daily Log
                 </button>
                 <button onClick={() => switchTabMobile('marketers')} style={{...styles.tab(activeTab === 'marketers'), borderRadius:'8px', border:'none', background: activeTab==='marketers' ? (isDark?'#374151':'#f0fdf4') : 'transparent'}}>
-                  <Users size={18} /> Marketers
+                  <Users size={20} /> Marketers
                 </button>
                 <button onClick={() => switchTabMobile('influencer')} style={{...styles.tab(activeTab === 'influencer'), borderRadius:'8px', border:'none', background: activeTab==='influencer' ? (isDark?'#374151':'#f0fdf4') : 'transparent'}}>
-                  <CheckSquare size={18} /> Influencer Stats
+                  <CheckSquare size={20} /> Influencer Stats
                 </button>
                 <button onClick={() => switchTabMobile('kpi')} style={{...styles.tab(activeTab === 'kpi'), borderRadius:'8px', border:'none', background: activeTab==='kpi' ? (isDark?'#374151':'#f0fdf4') : 'transparent'}}>
-                  <BarChart2 size={18} /> Dashboard KPI
+                  <BarChart2 size={20} /> Dashboard KPI
                 </button>
-                <div style={{borderTop: isDark?'1px solid #374151':'1px solid #eee', margin: '10px 0'}}></div>
+                <div style={{borderTop: isDark?'1px solid #374151':'1px solid #eee', margin: '16px 0'}}></div>
                 <button onClick={handleTabAdminClick} style={{...styles.tab(activeTab === 'admin'), borderRadius:'8px', border:'none', color: isAdmin ? '#16a34a' : (isDark?'#9ca3af':'#6b7280'), background: activeTab==='admin' ? (isDark?'#374151':'#f0fdf4') : 'transparent'}}>
-                  {isAdmin ? <Shield size={18} /> : <Lock size={18} />} Admin Dashboard
+                  {isAdmin ? <Shield size={20} /> : <Lock size={20} />} Admin Dashboard
                 </button>
               </div>
            </div>
@@ -695,33 +925,33 @@ export default function App() {
 
       {/* HEADER */}
       <div style={styles.header}>
-        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+        <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
            {/* Hamburger Icon for Mobile */}
            {isMobile && (
              <button onClick={() => setIsMobileMenuOpen(true)} style={{background:'none', border:'none', color:'white', cursor:'pointer', padding: 0, display: 'flex', alignItems: 'center'}}>
-               <MenuIcon size={26} />
+               <MenuIcon size={28} />
              </button>
            )}
-           <div style={{background: 'rgba(255,255,255,0.2)', padding: '8px', borderRadius: '8px', display: isMobile ? 'none' : 'flex'}}>
-             <FileText size={20} />
+           <div style={{background: 'rgba(255,255,255,0.2)', padding: '10px', borderRadius: '10px', display: isMobile ? 'none' : 'flex'}}>
+             <FileText size={24} />
            </div>
            <div>
-             <h1 style={{fontSize: isMobile ? '16px' : '18px', margin:0, fontWeight:700}}>Marketing Tracker</h1>
-             <div style={{fontSize:'11px', opacity:0.8, display:'flex', alignItems:'center', gap:'4px'}}>
-               <span style={{width:'6px', height:'6px', borderRadius:'50%', backgroundColor:'#4ade80'}}></span> Online
+             <h1 style={{fontSize: isMobile ? '18px' : '20px', margin:0, fontWeight:700}}>Marketing Tracker</h1>
+             <div style={{fontSize:'12px', opacity:0.8, display:'flex', alignItems:'center', gap:'6px'}}>
+               <span style={{width:'8px', height:'8px', borderRadius:'50%', backgroundColor:'#4ade80'}}></span> Online Sync
              </div>
            </div>
         </div>
-        <div style={{display:'flex', gap:'8px'}}>
+        <div style={{display:'flex', gap:'12px'}}>
           {!isMobile && (
-             <button onClick={() => isAdmin ? handleLogoutClick() : setIsLoginModalOpen(true)} style={{background: isAdmin ? '#ef4444' : '#3b82f6', border:'none', color:'white', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor: 'pointer', fontWeight: 600}}>
-                {isAdmin ? 'Keluar Admin' : 'Masuk Admin'}
+             <button onClick={() => isAdmin ? handleLogoutClick() : setIsLoginModalOpen(true)} style={{background: isAdmin ? '#ef4444' : '#3b82f6', border:'none', color:'white', borderRadius:'8px', padding:'8px 16px', fontSize:'13px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'}}>
+                {isAdmin ? <><Lock size={16}/> Keluar Admin</> : <><Shield size={16}/> Masuk Admin</>}
              </button>
           )}
-          <button onClick={() => fetchData(true)} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:'6px', padding:'6px', cursor:'pointer'}} title="Refresh Data">
-            <RefreshCw size={18} />
+          <button onClick={() => fetchData(true)} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:'8px', padding:'10px', cursor:'pointer', display: 'flex'}} title="Refresh Data">
+            <RefreshCw size={20} />
           </button>
-          <button onClick={() => setIsDark(!isDark)} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor: 'pointer', fontWeight: 500}}>
+          <button onClick={() => setIsDark(!isDark)} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:'8px', padding:'8px 16px', fontSize:'13px', cursor: 'pointer', fontWeight: 600}}>
              {isDark ? 'Light' : 'Dark'}
           </button>
         </div>
@@ -729,17 +959,17 @@ export default function App() {
 
       {/* TABS PENGGUNA (Hanya muncul di Desktop) */}
       <div style={styles.tabBar}>
-        <div onClick={() => setActiveTab('daily')} style={styles.tab(activeTab === 'daily')}><FileText size={16} /> Daily Log</div>
-        <div onClick={() => setActiveTab('marketers')} style={styles.tab(activeTab === 'marketers')}><Users size={16} /> Marketers</div>
-        <div onClick={() => setActiveTab('influencer')} style={styles.tab(activeTab === 'influencer')}><CheckSquare size={16} /> Influencer Stats</div>
-        <div onClick={() => setActiveTab('kpi')} style={styles.tab(activeTab === 'kpi')}><BarChart2 size={16} /> Dashboard KPI</div>
+        <div onClick={() => setActiveTab('daily')} style={styles.tab(activeTab === 'daily')}><FileText size={18} /> Daily Log</div>
+        <div onClick={() => setActiveTab('marketers')} style={styles.tab(activeTab === 'marketers')}><Users size={18} /> Marketers</div>
+        <div onClick={() => setActiveTab('influencer')} style={styles.tab(activeTab === 'influencer')}><CheckSquare size={18} /> Influencer Stats</div>
+        <div onClick={() => setActiveTab('kpi')} style={styles.tab(activeTab === 'kpi')}><BarChart2 size={18} /> Dashboard KPI</div>
         
         {/* Tab Spesial Admin Dashboard */}
         <div 
            onClick={handleTabAdminClick} 
            style={{...styles.tab(activeTab === 'admin'), marginLeft: 'auto', color: isAdmin ? '#16a34a' : (isDark?'#9ca3af':'#6b7280')}}
         >
-           {isAdmin ? <Shield size={16} /> : <Lock size={16} />} Admin Dashboard
+           {isAdmin ? <Shield size={18} /> : <Lock size={18} />} Admin Dashboard
         </div>
       </div>
 
@@ -750,81 +980,81 @@ export default function App() {
         {(activeTab === 'daily' || (activeTab === 'admin' && isAdmin)) && (
           <div>
             {/* FITUR PENCARIAN & FILTER RESPONSIVE */}
-            <div style={{display:'flex', justifyContent:'space-between', marginBottom:'20px', flexWrap:'wrap', gap:'15px', alignItems: 'flex-end'}}>
+            <div style={{display:'flex', justifyContent:'space-between', marginBottom:'24px', flexWrap:'wrap', gap:'16px', alignItems: 'flex-end'}}>
                
-               <div style={{display:'flex', gap:'10px', flex:1, flexWrap: 'wrap', alignItems: 'center'}}>
+               <div style={{display:'flex', gap:'12px', flex:1, flexWrap: 'wrap', alignItems: 'center'}}>
                   {/* Judul Halaman dinamis */}
-                  <div style={{width: '100%', marginBottom: '5px'}}>
-                     <h2 style={{fontSize: isMobile ? '16px' : '18px', margin:0, color: isDark?'white':'#333', fontWeight: 700}}>
+                  <div style={{width: '100%', marginBottom: '8px'}}>
+                     <h2 style={{fontSize: isMobile ? '18px' : '22px', margin:0, color: isDark?'white':'#111827', fontWeight: 800}}>
                         {activeTab === 'admin' ? 'Admin Dashboard - Kelola & Setujui Leads' : 'Daily Log - Semua Leads'}
                      </h2>
                   </div>
 
                   {/* Name Search */}
-                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 100%' : '1 1 200px', minWidth: '150px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
-                     <SearchIcon size={16} color="#9ca3af"/>
-                     <input placeholder="Cari Lead Name..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '13px'}} />
+                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 100%' : '1 1 220px', minWidth: '150px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                     <SearchIcon size={18} color={isDark ? "#9ca3af" : "#6b7280"}/>
+                     <input placeholder="Cari Lead Name..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '14px'}} />
                   </div>
                   
                   {/* Date Range Start */}
-                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 45%' : '0 1 auto', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
-                     <span style={{fontSize:'12px', color:'#9ca3af', marginRight:'5px'}}>Start:</span>
-                     <input type="date" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', fontFamily: 'inherit', width: '100%'}} />
+                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 45%' : '0 1 auto', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                     <span style={{fontSize:'13px', color: isDark ? '#9ca3af' : '#6b7280', marginRight:'8px'}}>Start:</span>
+                     <input type="date" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '14px', fontFamily: 'inherit', width: '100%'}} />
                   </div>
 
                   {/* Date Range End */}
-                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 45%' : '0 1 auto', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
-                     <span style={{fontSize:'12px', color:'#9ca3af', marginRight:'5px'}}>End:</span>
-                     <input type="date" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', fontFamily: 'inherit', width: '100%'}} />
+                  <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 45%' : '0 1 auto', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                     <span style={{fontSize:'13px', color: isDark ? '#9ca3af' : '#6b7280', marginRight:'8px'}}>End:</span>
+                     <input type="date" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '14px', fontFamily: 'inherit', width: '100%'}} />
                   </div>
 
-                  {/* Kustom Searchable Dropdown Marketer (Fitur Kayak Google Search) */}
-                  <div style={{ flex: isMobile ? '1 1 100%' : '1 1 180px' }}>
+                  {/* Kustom Searchable Dropdown Marketer */}
+                  <div style={{ flex: isMobile ? '1 1 100%' : '1 1 200px' }}>
                     <SearchableDropdown 
                        value={marketerFilter} 
                        onChange={setMarketerFilter} 
                        options={availableMarketers} 
-                       placeholder="Semua Marketer (Cari...)" 
+                       placeholder="Semua Marketer Email (Cari...)" 
                        isDark={isDark} 
                     />
                   </div>
                </div>
 
                {/* Action Buttons */}
-               <div style={{display: 'flex', gap: '10px', height: 'fit-content', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-start'}}>
+               <div style={{display: 'flex', gap: '12px', height: 'fit-content', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-start'}}>
                   <button onClick={handleExportCSV} style={{...styles.btnPrimary, backgroundColor: '#0284c7', flex: isMobile ? 1 : 'none', justifyContent: 'center'}} title="Export ke Excel/CSV">
-                    <Download size={16} /> <span>Export</span>
+                    <Download size={18} /> <span>Export</span>
                   </button>
                   <button onClick={() => { setEditingLead(null); setIsModalOpen(true); }} style={{...styles.btnPrimary, flex: isMobile ? 1 : 'none', justifyContent: 'center'}}>
-                    <span>+</span> <span>New Lead</span>
+                    <span style={{fontSize: '18px', lineHeight: 1}}>+</span> <span>New Lead</span>
                   </button>
                </div>
             </div>
 
             {/* --- ADMIN DASHBOARD KPIs --- */}
             {activeTab === 'admin' && (
-              <div style={{display:'grid', gridTemplateColumns: isMobile?'1fr 1fr':'repeat(4, 1fr)', gap:'15px', marginBottom: '20px'}}>
-                 <div style={{...styles.card, padding: '15px'}}>
-                    <div style={{fontSize:'12px', color:'#6b7280', fontWeight: 600}}>Total Filtered Leads</div>
-                    <div style={{fontSize:'24px', fontWeight:800, color: isDark?'white':'#1f2937'}}>{adminKpiStats.total}</div>
+              <div style={{display:'grid', gridTemplateColumns: isMobile?'1fr 1fr':'repeat(4, 1fr)', gap:'16px', marginBottom: '24px'}}>
+                 <div style={styles.card}>
+                    <div style={{fontSize:'13px', color:'#6b7280', fontWeight: 600}}>Total Filtered Leads</div>
+                    <div style={{fontSize:'28px', fontWeight:800, color: isDark?'white':'#111827', marginTop: '4px'}}>{adminKpiStats.total}</div>
                  </div>
-                 <div style={{...styles.card, padding: '15px'}}>
-                    <div style={{fontSize:'12px', color:'#d97706', fontWeight: 600}}>Pending Approval</div>
-                    <div style={{fontSize:'24px', fontWeight:800, color: '#d97706'}}>{adminKpiStats.pending}</div>
+                 <div style={styles.card}>
+                    <div style={{fontSize:'13px', color:'#d97706', fontWeight: 600}}>Pending Approval</div>
+                    <div style={{fontSize:'28px', fontWeight:800, color: '#d97706', marginTop: '4px'}}>{adminKpiStats.pending}</div>
                  </div>
-                 <div style={{...styles.card, padding: '15px'}}>
-                    <div style={{fontSize:'12px', color:'#16a34a', fontWeight: 600}}>Approved</div>
-                    <div style={{fontSize:'24px', fontWeight:800, color: '#16a34a'}}>{adminKpiStats.approved}</div>
+                 <div style={styles.card}>
+                    <div style={{fontSize:'13px', color:'#16a34a', fontWeight: 600}}>Approved</div>
+                    <div style={{fontSize:'28px', fontWeight:800, color: '#16a34a', marginTop: '4px'}}>{adminKpiStats.approved}</div>
                  </div>
-                 <div style={{...styles.card, padding: '15px'}}>
-                    <div style={{fontSize:'12px', color:'#ef4444', fontWeight: 600}}>Declined</div>
-                    <div style={{fontSize:'24px', fontWeight:800, color: '#ef4444'}}>{adminKpiStats.declined}</div>
+                 <div style={styles.card}>
+                    <div style={{fontSize:'13px', color:'#ef4444', fontWeight: 600}}>Declined</div>
+                    <div style={{fontSize:'28px', fontWeight:800, color: '#ef4444', marginTop: '4px'}}>{adminKpiStats.declined}</div>
                  </div>
               </div>
             )}
 
             {/* TABEL DATA RESPONSIVE */}
-            <div style={{overflowX: 'auto', border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: '12px'}}>
+            <div style={{overflowX: 'auto', border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
                <table style={styles.table}>
                   <thead>
                     <tr>
@@ -840,51 +1070,51 @@ export default function App() {
                       <th style={styles.th}>Template</th>
                       <th style={styles.th}>Type</th>
                       <th style={styles.th}>Notes</th>
-                      <th style={styles.th}>Marketer</th>
+                      <th style={styles.th}>Marketer Email</th>
                     </tr>
                   </thead>
                   <tbody>
                     {paginatedLogs.length === 0 ? (
-                       <tr><td colSpan={13} style={{padding:'40px', textAlign:'center', color:'#6b7280'}}>Tidak ada data.</td></tr>
+                       <tr><td colSpan={13} style={{padding:'60px', textAlign:'center', color:'#6b7280', fontSize: '15px'}}>Tidak ada data ditemukan.</td></tr>
                     ) : (
                        paginatedLogs.map((row, index) => (
-                         <tr key={row.id} style={{backgroundColor: isDark ? 'transparent' : 'white'}}>
-                           <td style={{...styles.td, textAlign: 'center', color: '#9ca3af', fontSize: '12px'}}>
+                         <tr key={row.id} style={{backgroundColor: isDark ? 'transparent' : 'white', transition: 'background-color 0.2s'}}>
+                           <td style={{...styles.td, textAlign: 'center', color: isDark ? '#9ca3af' : '#6b7280', fontSize: '13px'}}>
                               {(currentPage - 1) * itemsPerPage + index + 1}
                            </td>
 
-                           <td style={styles.td}>{row.date}</td>
+                           <td style={{...styles.td, whiteSpace: 'nowrap'}}>{row.date}</td>
                            <td style={styles.td}><span style={{fontWeight: 600, display: 'inline-block', whiteSpace: 'nowrap'}}>{row.leadName}</span></td>
-                           <td style={styles.td}>{row.profileUrl && <a href={row.profileUrl} target="_blank" rel="noreferrer" style={{color:'#2563eb', display: 'flex', alignItems: 'center'}}><LinkIcon size={16}/></a>}</td>
-                           <td style={styles.td}>{row.email || '-'}</td>
+                           <td style={{...styles.td, textAlign: 'center'}}>{row.profileUrl && <a href={row.profileUrl} target="_blank" rel="noreferrer" style={{color:'#2563eb', display: 'inline-flex', alignItems: 'center', padding: '4px', borderRadius: '4px', background: isDark?'#374151':'#eff6ff'}}><LinkIcon size={18}/></a>}</td>
+                           <td style={styles.td}>{row.email || <span style={{color: isDark?'#6b7280':'#9ca3af', fontStyle:'italic'}}>-</span>}</td>
                            
                            <td style={styles.td}>
                               {/* Logika Tampilan Utama Approval */}
                               {activeTab === 'admin' ? (
-                                 <div style={{display:'flex', gap:'5px', alignItems: 'center'}}>
-                                   <button onClick={() => handleApproveClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#dcfce7', color: '#16a34a', padding: '4px 8px'}} title="Approve"><CheckSquare size={14} /> <span style={{marginLeft:'4px', fontSize:'11px', fontWeight:600}}>Approve</span></button>
-                                   <button onClick={() => handleDeclineClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444', padding: '4px 8px'}} title="Decline"><X size={14} /> <span style={{marginLeft:'4px', fontSize:'11px', fontWeight:600}}>Decline</span></button>
+                                 <div style={{display:'flex', gap:'8px', alignItems: 'center'}}>
+                                   <button onClick={() => handleApproveClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#14532d' : '#dcfce7', color: '#16a34a', padding: '6px 10px'}} title="Approve"><CheckSquare size={16} /> <span style={{marginLeft:'6px', fontSize:'12px', fontWeight:600}}>Approve</span></button>
+                                   <button onClick={() => handleDeclineClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#7f1d1d' : '#fee2e2', color: '#ef4444', padding: '6px 10px'}} title="Decline"><X size={16} /> <span style={{marginLeft:'6px', fontSize:'12px', fontWeight:600}}>Decline</span></button>
                                  </div>
                               ) : (
                                  row.status === 'New' ? (
                                     (row.approvalStatus === 'Pending' && row.email) ? (
-                                       <span style={{color: '#d97706', fontSize: '12px', fontWeight: 600, display: 'inline-block', whiteSpace: 'nowrap'}}>Pending...</span>
+                                       <span style={{color: '#d97706', fontSize: '13px', fontWeight: 600, display: 'inline-block', whiteSpace: 'nowrap'}}>Pending...</span>
                                     ) : row.approvalStatus === 'Declined' ? (
-                                       <div style={{display:'flex', flexDirection: 'column', gap:'4px'}}>
-                                          <span style={{color: '#ef4444', fontSize: '12px', fontWeight: 700}}>Declined</span>
-                                          <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'10px', padding: '2px 6px', borderRadius:'4px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'black', border:isDark?'1px solid #4b5563':'1px solid #ddd', cursor:'pointer', whiteSpace: 'nowrap'}}>Req. Again</button>
+                                       <div style={{display:'flex', flexDirection: 'column', gap:'6px'}}>
+                                          <span style={{color: '#ef4444', fontSize: '13px', fontWeight: 700}}>Declined</span>
+                                          <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'11px', padding: '4px 8px', borderRadius:'6px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'#111827', border:isDark?'1px solid #4b5563':'1px solid #d1d5db', cursor:'pointer', whiteSpace: 'nowrap', fontWeight: 500}}>Req. Again</button>
                                        </div>
                                     ) : (
-                                       <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'11px', padding: '4px 8px', borderRadius:'6px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'black', border:isDark?'1px solid #4b5563':'1px solid #ddd', cursor:'pointer', whiteSpace: 'nowrap'}}>Req. Approval</button>
+                                       <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'12px', padding: '6px 10px', borderRadius:'6px', background: isDark?'#374151':'#f3f4f6', color:isDark?'white':'#111827', border:isDark?'1px solid #4b5563':'1px solid #d1d5db', cursor:'pointer', whiteSpace: 'nowrap', fontWeight: 500}}>Req. Approval</button>
                                     )
-                                 ) : <span style={{color:'#16a34a', fontSize:'11px', fontWeight: 600, display: 'inline-block', whiteSpace: 'nowrap'}}>Approved</span>
+                                 ) : <span style={{color:'#16a34a', fontSize:'13px', fontWeight: 600, display: 'inline-block', whiteSpace: 'nowrap'}}>Approved</span>
                               )}
 
                               {/* Alat Khusus Admin: Edit & Delete Tampil di Semua Tab jika sudah Login */}
                               {isAdmin && (
-                                 <div style={{display:'flex', gap:'5px', alignItems: 'center', marginTop: '8px', paddingTop: '8px', borderTop: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'}}>
-                                    <button onClick={() => {setEditingLead(row); setIsModalOpen(true);}} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#e0f2fe', color: '#0284c7'}} title="Edit Log Manual"><Edit size={14} /></button>
-                                    <button onClick={() => handleDeleteClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#374151' : '#fee2e2', color: '#ef4444'}} title="Delete Log Manual"><Trash2 size={14} /></button>
+                                 <div style={{display:'flex', gap:'8px', alignItems: 'center', marginTop: '10px', paddingTop: '10px', borderTop: isDark ? '1px solid #4b5563' : '1px solid #e5e7eb'}}>
+                                    <button onClick={() => {setEditingLead(row); setIsModalOpen(true);}} style={{...styles.actionBtn, backgroundColor: isDark ? '#1e3a8a' : '#e0f2fe', color: '#0284c7'}} title="Edit Log Manual"><Edit size={16} /></button>
+                                    <button onClick={() => handleDeleteClick(row)} style={{...styles.actionBtn, backgroundColor: isDark ? '#7f1d1d' : '#fee2e2', color: '#ef4444'}} title="Delete Log Manual"><Trash2 size={16} /></button>
                                  </div>
                               )}
                            </td>
@@ -893,16 +1123,16 @@ export default function App() {
                              <span style={{
                                display: 'inline-block',
                                whiteSpace: 'nowrap',
-                               padding:'4px 10px', borderRadius:'20px', fontSize:'11px', fontWeight:600,
-                               backgroundColor: String(row.status).toLowerCase().includes('deal')||String(row.status).toLowerCase().includes('signed') ? '#dcfce7' : (row.status==='In Progress' ? '#dbeafe' : (isDark ? '#374151' : '#f3f4f6')),
-                               color: String(row.status).toLowerCase().includes('deal')||String(row.status).toLowerCase().includes('signed') ? '#166534' : (row.status==='In Progress' ? '#1e40af' : (isDark ? '#e5e7eb' : '#374151')),
+                               padding:'6px 12px', borderRadius:'20px', fontSize:'12px', fontWeight:600,
+                               backgroundColor: String(row.status).toLowerCase().includes('deal')||String(row.status).toLowerCase().includes('signed') ? (isDark ? '#14532d' : '#dcfce7') : (row.status==='In Progress' ? (isDark ? '#1e3a8a' : '#dbeafe') : (isDark ? '#374151' : '#f3f4f6')),
+                               color: String(row.status).toLowerCase().includes('deal')||String(row.status).toLowerCase().includes('signed') ? (isDark ? '#4ade80' : '#166534') : (row.status==='In Progress' ? (isDark ? '#60a5fa' : '#1e40af') : (isDark ? '#e5e7eb' : '#374151')),
                              }}>{row.status}</span>
                            </td>
                            <td style={{...styles.td, whiteSpace: 'nowrap'}}>{row.industry}</td>
                            <td style={{...styles.td, whiteSpace: 'nowrap'}}>{row.source}</td>
                            <td style={{...styles.td, whiteSpace: 'nowrap'}}>{row.template}</td>
                            <td style={{...styles.td, whiteSpace: 'nowrap'}}>{row.interactionType}</td>
-                           <td style={{...styles.td, fontSize:'12px', color: isDark ? '#9ca3af' : '#6b7280', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}} title={row.notes}>{row.notes}</td>
+                           <td style={{...styles.td, fontSize:'13px', color: isDark ? '#9ca3af' : '#4b5563', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}} title={row.notes}>{row.notes}</td>
                            <td style={{...styles.td, whiteSpace: 'nowrap', fontWeight: 600}}>{row.marketer}</td>
                          </tr>
                        ))
@@ -912,21 +1142,21 @@ export default function App() {
             </div>
             
             {/* PAGINATION CONTROLS */}
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px', flexWrap: 'wrap', gap: '10px'}}>
-               <div style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap', gap: '16px'}}>
+               <div style={{fontSize: '14px', color: isDark ? '#9ca3af' : '#6b7280', display: 'flex', alignItems: 'center'}}>
                   Showing 
-                  <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} style={{margin: '0 8px', padding: '4px', borderRadius: '4px', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', background: isDark?'#374151':'white', color: isDark?'white':'black'}}>
+                  <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} style={{margin: '0 8px', padding: '6px 10px', borderRadius: '6px', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', background: isDark?'#374151':'white', color: isDark?'white':'black', fontFamily: 'inherit'}}>
                      <option value={25}>25</option>
                      <option value={50}>50</option>
                      <option value={75}>75</option>
                      <option value={100}>100</option>
                   </select> 
-                  rows per page (Total: {filteredLogs.length})
+                  rows per page (Total: <span style={{fontWeight: 700, marginLeft: '4px'}}>{filteredLogs.length}</span>)
                </div>
-               <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-                  <button disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)} style={{padding: '6px 12px', borderRadius: '6px', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', background: currentPage===1 ? 'transparent' : (isDark?'#374151':'white'), color: currentPage===1 ? '#9ca3af' : (isDark?'white':'black'), cursor: currentPage===1 ? 'not-allowed' : 'pointer'}}>Prev</button>
-                  <span style={{fontSize: '13px', margin: '0 5px'}}>Page {currentPage} of {totalPages || 1}</span>
-                  <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(c => c + 1)} style={{padding: '6px 12px', borderRadius: '6px', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', background: (currentPage === totalPages || totalPages === 0) ? 'transparent' : (isDark?'#374151':'white'), color: (currentPage === totalPages || totalPages === 0) ? '#9ca3af' : (isDark?'white':'black'), cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer'}}>Next</button>
+               <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+                  <button disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)} style={{padding: '8px 16px', borderRadius: '8px', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', background: currentPage===1 ? 'transparent' : (isDark?'#374151':'white'), color: currentPage===1 ? (isDark?'#4b5563':'#9ca3af') : (isDark?'white':'#111827'), cursor: currentPage===1 ? 'not-allowed' : 'pointer', fontWeight: 500}}>Prev</button>
+                  <span style={{fontSize: '14px', margin: '0 8px', fontWeight: 500}}>Page {currentPage} of {totalPages || 1}</span>
+                  <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(c => c + 1)} style={{padding: '8px 16px', borderRadius: '8px', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', background: (currentPage === totalPages || totalPages === 0) ? 'transparent' : (isDark?'#374151':'white'), color: (currentPage === totalPages || totalPages === 0) ? (isDark?'#4b5563':'#9ca3af') : (isDark?'white':'#111827'), cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', fontWeight: 500}}>Next</button>
                </div>
             </div>
 
@@ -935,49 +1165,51 @@ export default function App() {
 
         {/* Jika User bypass Admin Panel tanpa Login */}
         {activeTab === 'admin' && !isAdmin && (
-           <div style={{textAlign: 'center', padding: '60px 20px'}}>
-              <Lock size={64} color="#ef4444" style={{margin: '0 auto 20px auto'}} />
-              <h2 style={{color: isDark?'white':'#333', marginBottom: '10px'}}>Akses Terkunci</h2>
-              <p style={{color: '#6b7280', marginBottom: '20px'}}>Anda harus masuk sebagai admin untuk melihat halaman ini.</p>
-              <button onClick={() => setIsLoginModalOpen(true)} style={{...styles.btnPrimary, margin: '0 auto'}}>Masuk Admin</button>
+           <div style={{textAlign: 'center', padding: '80px 20px'}}>
+              <div style={{background: isDark?'#374151':'#fee2e2', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px auto'}}>
+                <Lock size={40} color="#ef4444" />
+              </div>
+              <h2 style={{color: isDark?'white':'#111827', marginBottom: '12px', fontSize: '24px'}}>Akses Terkunci</h2>
+              <p style={{color: isDark?'#9ca3af':'#6b7280', marginBottom: '24px', fontSize: '15px'}}>Anda harus masuk sebagai admin untuk melihat halaman ini.</p>
+              <button onClick={() => setIsLoginModalOpen(true)} style={{...styles.btnPrimary, margin: '0 auto', padding: '12px 24px'}}>Masuk Admin</button>
            </div>
         )}
 
         {/* --- TAB 2: MARKETERS PAGE --- */}
         {activeTab === 'marketers' && (
            <div>
-              <div style={{display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '20px', gap: '15px'}}>
-                 <h2 style={{fontSize: isMobile ? '16px' : '18px', margin:0, color: isDark?'white':'#333', fontWeight: 700}}>Marketers Performance</h2>
+              <div style={{display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '24px', gap: '16px'}}>
+                 <h2 style={{fontSize: isMobile ? '18px' : '22px', margin:0, color: isDark?'white':'#111827', fontWeight: 800}}>Marketers Performance (by Email)</h2>
                  
-                 <div style={{display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:'10px', width: isMobile ? '100%' : 'auto', alignItems: 'center'}}>
+                 <div style={{display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:'12px', width: isMobile ? '100%' : 'auto', alignItems: 'center'}}>
                     {/* Search Marketer */}
-                    <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 100%' : '1 1 200px', minWidth: '150px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', width: isMobile ? '100%' : 'auto'}}>
-                       <SearchIcon size={16} color="#9ca3af"/>
-                       <input placeholder="Cari Marketer..." value={marketerSearchQuery} onChange={(e) => setMarketerSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '13px'}} />
+                    <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 100%' : '1 1 220px', minWidth: '150px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', width: isMobile ? '100%' : 'auto'}}>
+                       <SearchIcon size={18} color={isDark ? "#9ca3af" : "#6b7280"}/>
+                       <input placeholder="Cari Email Marketer..." value={marketerSearchQuery} onChange={(e) => setMarketerSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '14px'}} />
                     </div>
                     
                     {/* Wrapper untuk Date Range agar tetap berdampingan/proporsional */}
-                    <div style={{display: 'flex', gap: '10px', width: isMobile ? '100%' : 'auto'}}>
+                    <div style={{display: 'flex', gap: '12px', width: isMobile ? '100%' : 'auto'}}>
                        {/* Date Range Start */}
-                       <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
-                          <span style={{fontSize:'12px', color:'#9ca3af', marginRight:'5px'}}>Start:</span>
-                          <input type="date" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', fontFamily: 'inherit', width: '100%'}} />
+                       <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', borderRadius:'8px', padding:'0 12px', flex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                          <span style={{fontSize:'13px', color: isDark ? '#9ca3af' : '#6b7280', marginRight:'8px'}}>Start:</span>
+                          <input type="date" value={dateRange.start} onChange={(e) => setDateRange({...dateRange, start: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '14px', fontFamily: 'inherit', width: '100%'}} />
                        </div>
 
                        {/* Date Range End */}
-                       <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #ddd', borderRadius:'8px', padding:'0 12px', flex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
-                          <span style={{fontSize:'12px', color:'#9ca3af', marginRight:'5px'}}>End:</span>
-                          <input type="date" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '13px', fontFamily: 'inherit', width: '100%'}} />
+                       <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', borderRadius:'8px', padding:'0 12px', flex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
+                          <span style={{fontSize:'13px', color: isDark ? '#9ca3af' : '#6b7280', marginRight:'8px'}}>End:</span>
+                          <input type="date" value={dateRange.end} onChange={(e) => setDateRange({...dateRange, end: e.target.value})} style={{border:'none', background:'transparent', padding:'10px 0', outline:'none', color: isDark?'white':'black', fontSize: '14px', fontFamily: 'inherit', width: '100%'}} />
                        </div>
                     </div>
                  </div>
               </div>
               
-              <div style={{overflowX: 'auto', border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: '12px'}}>
+              <div style={{overflowX: 'auto', border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
                 <table style={styles.table}>
                    <thead>
                      <tr>
-                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Marketer Name</th>
+                       <th style={{...styles.th, whiteSpace: 'nowrap'}}>Marketer Email</th>
                        <th style={{...styles.th, whiteSpace: 'nowrap'}}>Total Leads</th>
                        <th style={{...styles.th, whiteSpace: 'nowrap'}}>Direct Asks</th>
                        <th style={{...styles.th, whiteSpace: 'nowrap'}}>Deals / Signed</th>
@@ -988,22 +1220,22 @@ export default function App() {
                    </thead>
                    <tbody>
                      {marketersStatsList.map((m, idx) => (
-                       <tr key={idx}>
+                       <tr key={idx} style={{backgroundColor: isDark ? 'transparent' : 'white'}}>
                          <td style={{...styles.td, fontWeight:600, whiteSpace: 'nowrap'}}>{m.name}</td>
                          <td style={styles.td}>{m.totalLeads}</td>
                          <td style={styles.td}>{m.directAsks}</td>
                          <td style={styles.td}>{m.deals}</td>
                          <td style={{...styles.td, color: '#d97706', fontWeight: 700}}>{m.conversionRate}%</td>
                          <td style={styles.td}>
-                            <span style={{display: 'inline-block', whiteSpace: 'nowrap', padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, backgroundColor: m.status === 'Active' ? '#dcfce7' : '#fee2e2', color: m.status === 'Active' ? '#16a34a' : '#ef4444'}}>
+                            <span style={{display: 'inline-block', whiteSpace: 'nowrap', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, backgroundColor: m.status === 'Active' ? (isDark ? '#14532d' : '#dcfce7') : (isDark ? '#7f1d1d' : '#fee2e2'), color: m.status === 'Active' ? (isDark ? '#4ade80' : '#16a34a') : (isDark ? '#f87171' : '#ef4444')}}>
                                {m.status}
                             </span>
                          </td>
-                         <td style={{...styles.td, fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap'}}>{m.lastUpdate || '-'}</td>
+                         <td style={{...styles.td, fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280', whiteSpace: 'nowrap'}}>{m.lastUpdate || '-'}</td>
                        </tr>
                      ))}
                      {marketersStatsList.length === 0 && (
-                        <tr><td colSpan={7} style={{padding:'40px', textAlign:'center', color:'#6b7280'}}>Belum ada data marketer.</td></tr>
+                        <tr><td colSpan={7} style={{padding:'60px', textAlign:'center', color:'#6b7280', fontSize: '15px'}}>Belum ada data marketer.</td></tr>
                      )}
                    </tbody>
                 </table>
@@ -1014,8 +1246,8 @@ export default function App() {
         {/* --- TAB 3: INFLUENCER --- */}
         {activeTab === 'influencer' && (
            <div>
-              <h2 style={{fontSize: isMobile ? '16px' : '18px', marginBottom:'15px', color: isDark?'white':'#333', fontWeight: 700}}>Influencer / Source Performance (All Time)</h2>
-              <div style={{overflowX: 'auto', border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: '12px'}}>
+              <h2 style={{fontSize: isMobile ? '18px' : '22px', marginBottom:'24px', color: isDark?'white':'#111827', fontWeight: 800}}>Influencer / Source Performance (All Time)</h2>
+              <div style={{overflowX: 'auto', border: isDark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
                 <table style={styles.table}>
                    <thead>
                      <tr>
@@ -1026,15 +1258,15 @@ export default function App() {
                    </thead>
                    <tbody>
                      {globalKpiStats.postPerformance?.map((item, idx) => (
-                       <tr key={idx}>
-                         <td style={{...styles.td, whiteSpace: 'nowrap'}}>{item.source}</td>
-                         <td style={{...styles.td, fontSize:'16px', fontWeight:'bold'}}>{item.count}</td>
+                       <tr key={idx} style={{backgroundColor: isDark ? 'transparent' : 'white'}}>
+                         <td style={{...styles.td, whiteSpace: 'nowrap', fontWeight: 500}}>{item.source}</td>
+                         <td style={{...styles.td, fontSize:'16px', fontWeight:'700'}}>{item.count}</td>
                          <td style={styles.td}>
                             <span style={{
                                display: 'inline-block', whiteSpace: 'nowrap',
-                               padding:'4px 10px', borderRadius:'12px', fontSize:'12px', fontWeight:700,
-                               backgroundColor: item.rating==='Excellent' ? '#dcfce7' : (item.rating==='Good' ? '#dbeafe' : '#fef9c3'),
-                               color: item.rating==='Excellent' ? '#166534' : (item.rating==='Good' ? '#1e40af' : '#854d0e')
+                               padding:'6px 12px', borderRadius:'20px', fontSize:'12px', fontWeight:700,
+                               backgroundColor: item.rating==='Excellent' ? (isDark?'#14532d':'#dcfce7') : (item.rating==='Good' ? (isDark?'#1e3a8a':'#dbeafe') : (isDark?'#713f12':'#fef9c3')),
+                               color: item.rating==='Excellent' ? (isDark?'#4ade80':'#166534') : (item.rating==='Good' ? (isDark?'#60a5fa':'#1e40af') : (isDark?'#fde047':'#854d0e'))
                             }}>{item.rating}</span>
                          </td>
                        </tr>
@@ -1047,27 +1279,27 @@ export default function App() {
 
         {/* --- TAB 4: KPI DASHBOARD --- */}
         {activeTab === 'kpi' && (
-           <div style={{display:'grid', gridTemplateColumns: isMobile?'1fr':'repeat(4, 1fr)', gap:'20px'}}>
-              <div style={{gridColumn: '1 / -1', background: isDark?'#374151':'#f3f4f6', padding: '12px', borderRadius: '8px', fontSize: '13px', color: isDark?'#d1d5db':'#4b5563'}}>
-                 Data KPI dihitung secara otomatis berdasarkan filter <b>Date Range</b> dan <b>Marketer</b> yang Anda pilih di menu utama.
+           <div style={{display:'grid', gridTemplateColumns: isMobile?'1fr':'repeat(4, 1fr)', gap:'24px'}}>
+              <div style={{gridColumn: '1 / -1', background: isDark?'rgba(55, 65, 81, 0.5)':'#f3f4f6', padding: '16px', borderRadius: '8px', fontSize: '14px', color: isDark?'#d1d5db':'#4b5563', borderLeft: '4px solid #3b82f6'}}>
+                 Data KPI dihitung secara <b>otomatis</b> berdasarkan filter <b>Date Range</b> dan <b>Marketer Email</b> yang Anda pilih di menu Daily Log.
               </div>
               <div style={styles.card}>
-                 <div style={{fontSize:'12px', textTransform:'uppercase', color:'#6b7280', fontWeight: 600, letterSpacing: '0.5px'}}>Total Leads</div>
-                 <div style={{fontSize:'36px', fontWeight:800, color: isDark?'white':'#1f2937', marginTop: '8px'}}>{globalKpiStats.totalLeads}</div>
+                 <div style={{fontSize:'13px', textTransform:'uppercase', color: isDark?'#9ca3af':'#6b7280', fontWeight: 600, letterSpacing: '0.5px'}}>Total Leads</div>
+                 <div style={{fontSize:'40px', fontWeight:800, color: isDark?'white':'#111827', marginTop: '12px'}}>{globalKpiStats.totalLeads}</div>
               </div>
               <div style={styles.card}>
-                 <div style={{fontSize:'12px', textTransform:'uppercase', color:'#2563eb', fontWeight: 600, letterSpacing: '0.5px'}}>Direct Asks</div>
-                 <div style={{fontSize:'36px', fontWeight:800, color: '#2563eb', marginTop: '8px'}}>{globalKpiStats.directAskCount}</div>
+                 <div style={{fontSize:'13px', textTransform:'uppercase', color:'#3b82f6', fontWeight: 600, letterSpacing: '0.5px'}}>Direct Asks</div>
+                 <div style={{fontSize:'40px', fontWeight:800, color: '#3b82f6', marginTop: '12px'}}>{globalKpiStats.directAskCount}</div>
               </div>
               <div style={styles.card}>
-                 <div style={{fontSize:'12px', textTransform:'uppercase', color:'#16a34a', fontWeight: 600, letterSpacing: '0.5px'}}>Deals / Signed</div>
-                 <div style={{fontSize:'36px', fontWeight:800, color: '#16a34a', marginTop: '8px'}}>{globalKpiStats.conversionCount}</div>
+                 <div style={{fontSize:'13px', textTransform:'uppercase', color:'#16a34a', fontWeight: 600, letterSpacing: '0.5px'}}>Deals / Signed</div>
+                 <div style={{fontSize:'40px', fontWeight:800, color: '#16a34a', marginTop: '12px'}}>{globalKpiStats.conversionCount}</div>
               </div>
               <div style={styles.card}>
-                 <div style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize:'12px', textTransform:'uppercase', color:'#d97706', fontWeight: 600, letterSpacing: '0.5px'}}>
-                    <TrendingUp size={16} /> Conversion Rate
+                 <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize:'13px', textTransform:'uppercase', color:'#d97706', fontWeight: 600, letterSpacing: '0.5px'}}>
+                    <TrendingUp size={18} /> Conversion Rate
                  </div>
-                 <div style={{fontSize:'36px', fontWeight:800, color: '#d97706', marginTop: '8px'}}>{conversionRate}%</div>
+                 <div style={{fontSize:'40px', fontWeight:800, color: '#d97706', marginTop: '12px'}}>{conversionRate}%</div>
               </div>
            </div>
         )}
@@ -1082,7 +1314,7 @@ export default function App() {
 const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: any) => {
   const [formData, setFormData] = useState<any>({});
 
-  // Reset form setiap kali dipanggil (terutama saat berpindah antar Edit baris yang berbeda)
+  // Reset form setiap kali dipanggil, auto-fill Marketer Email jika ada di lokal.
   useEffect(() => {
     setFormData({
       rawDateIso: initialData?.rawDateIso || new Date().toISOString().split('T')[0],
@@ -1097,7 +1329,7 @@ const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: 
       responseTime: initialData?.responseTime || '',
       status: initialData?.status || 'New',
       notes: initialData?.notes || '',
-      marketer: initialData?.marketer || '',
+      marketer: initialData?.marketer || localStorage.getItem('savedMarketerEmail') || '',
       approvalStatus: initialData?.approvalStatus || 'None'
     });
   }, [initialData]);
@@ -1115,52 +1347,56 @@ const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: 
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
+    if (!initialData && formData.marketer) {
+        // Simpan Email lokal biar sesi selanjutnya marketer ga perlu ketik ulang
+        localStorage.setItem('savedMarketerEmail', formData.marketer);
+    }
     onSubmit(formData);
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <div>
-          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Tanggal Kontak</label>
+          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Tanggal Kontak</label>
           <input type="date" name="rawDateIso" value={formData.rawDateIso || ''} onChange={handleChange} required style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
         </div>
         <div>
-          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Lead Name</label>
+          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Lead Name</label>
           <input type="text" name="name" value={formData.name || ''} onChange={handleChange} required style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
         </div>
         
-        {/* Hanya dimunculkan saat ADMIN SEDANG EDIT, Untuk Lead Baru Kolom Ini Dihilangkan */}
+        {/* Hanya dimunculkan saat ADMIN SEDANG EDIT */}
         {initialData && (
           <div>
-            <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Lead Email</label>
+            <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Lead Email</label>
             <input type="email" name="email" value={formData.email || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
           </div>
         )}
 
         <div>
-          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Bukti / Profile URL</label>
+          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Bukti / Profile URL</label>
           <input type="text" name="url" value={formData.url || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
         </div>
         <div>
-          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Industry / Role</label>
+          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Industry / Role</label>
           <input type="text" name="industry" value={formData.industry || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
         </div>
         <div>
-          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Marketer Name</label>
-          <input type="text" name="marketer" value={formData.marketer || ''} onChange={handleChange} required style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Marketer Email</label>
+          <input type="email" name="marketer" placeholder="email@swakarsa.com" value={formData.marketer || ''} onChange={handleChange} required style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
         </div>
         <div>
-          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Source / Influencer</label>
+          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Source / Influencer</label>
           <input type="text" name="source" value={formData.source || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
         </div>
         <div>
-          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Template Used</label>
+          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Template Used</label>
           <input type="text" name="template" value={formData.template || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
         </div>
         <div>
-          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Interaction Type</label>
-          <select name="interactionType" value={formData.interactionType || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}}>
+          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Interaction Type</label>
+          <select name="interactionType" value={formData.interactionType || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box', appearance: 'auto'}}>
             <option value="">-- Pilih --</option>
             <option value="Direct Ask">Direct Ask</option>
             <option value="Soft Sell">Soft Sell</option>
@@ -1168,9 +1404,9 @@ const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: 
           </select>
         </div>
         <div>
-          <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Status Conversion</label>
+          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Status Conversion</label>
           {initialData ? (
-            <select name="status" value={formData.status || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}}>
+            <select name="status" value={formData.status || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box', appearance: 'auto'}}>
               <option value="New">New</option>
               <option value="In Progress">In Progress</option>
               <option value="Deal / Signed">Deal / Signed</option>
@@ -1186,7 +1422,7 @@ const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: 
                 ...styles.input, 
                 width: '100%', 
                 boxSizing: 'border-box',
-                backgroundColor: isDark ? '#374151' : '#f3f4f6',
+                backgroundColor: isDark ? '#4b5563' : '#e5e7eb',
                 color: isDark ? '#9ca3af' : '#6b7280',
                 cursor: 'not-allowed'
               }} 
@@ -1195,27 +1431,27 @@ const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: 
         </div>
       </div>
       
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
          <div>
-            <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Response Time</label>
+            <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Response Time</label>
             <input type="text" name="responseTime" value={formData.responseTime || ''} onChange={handleChange} placeholder="e.g. 5 Mins" style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
          </div>
-         <div style={{ display: 'flex', alignItems: 'center', paddingTop: '15px' }}>
-            <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#374151', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600 }}>
-              <input type="checkbox" name="tagged" checked={formData.tagged || false} onChange={handleChange} style={{ width: '16px', height: '16px' }} />
+         <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>
+            <label style={{ fontSize: '14px', color: isDark ? '#f3f4f6' : '#111827', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600 }}>
+              <input type="checkbox" name="tagged" checked={formData.tagged || false} onChange={handleChange} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
               Jonathan Tagged?
             </label>
          </div>
       </div>
 
       <div>
-        <label style={{ fontSize: '12px', color: isDark ? '#9ca3af' : '#4b5563', marginBottom: '4px', display: 'block' }}>Notes / Feedback</label>
-        <textarea name="notes" value={formData.notes || ''} onChange={handleChange} style={{ ...styles.input, width: '100%', height: '70px', resize: 'none', boxSizing: 'border-box' }} />
+        <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Notes / Feedback</label>
+        <textarea name="notes" value={formData.notes || ''} onChange={handleChange} style={{ ...styles.input, width: '100%', height: '80px', resize: 'none', boxSizing: 'border-box' }} />
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-        <button type="button" onClick={onCancel} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#374151', cursor: 'pointer', fontWeight: 600 }}>Batal</button>
-        <button type="submit" style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#0ea5e9', color: 'white', fontWeight: 600, cursor: 'pointer' }}>{initialData ? 'Update Data' : 'Simpan Baru'}</button>
+      <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+        <button type="button" onClick={onCancel} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#111827', cursor: 'pointer', fontWeight: 600 }}>Batal</button>
+        <button type="submit" style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#0284c7', color: 'white', fontWeight: 600, cursor: 'pointer' }}>{initialData ? 'Update Data' : 'Simpan Baru'}</button>
       </div>
     </form>
   );
@@ -1236,18 +1472,20 @@ const PinModal = ({ isOpen, onClose, onSubmit, isDark, styles }: any) => {
   };
 
   return (
-    <AnimatedModal isOpen={isOpen} onClose={() => { onClose(); setPin(''); setError(''); }} styles={styles} contentStyle={{ width: '320px', textAlign: 'center' }}>
-       <Lock size={48} color={isDark ? '#e5e7eb' : '#374151'} style={{margin: '0 auto 15px auto', display: 'block'}} />
-       <h3 style={{marginTop:0, color: isDark?'white':'#1f2937', fontSize: '18px'}}>Login Admin</h3>
-       <p style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '24px'}}>
+    <AnimatedModal isOpen={isOpen} onClose={() => { onClose(); setPin(''); setError(''); }} styles={styles} contentStyle={{ width: '340px', textAlign: 'center' }}>
+       <div style={{background: isDark?'#374151':'#f3f4f6', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto'}}>
+         <Lock size={32} color={isDark ? '#e5e7eb' : '#374151'} />
+       </div>
+       <h3 style={{marginTop:0, color: isDark?'white':'#111827', fontSize: '20px', fontWeight: 700}}>Login Admin</h3>
+       <p style={{fontSize: '14px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '24px'}}>
          Masukkan password admin untuk mengakses fitur Admin.
        </p>
        <form onSubmit={handleSubmit}>
-          <input type="password" value={pin} autoFocus onChange={(e) => setPin(e.target.value)} placeholder="Password" style={{...styles.input, textAlign: 'center', fontSize: '16px', marginBottom: '15px', padding: '12px'}} />
-          {error && <div style={{color: '#ef4444', fontSize: '12px', marginBottom: '10px'}}>{error}</div>}
-          <div style={{display: 'flex', gap: '10px'}}>
-             <button type="button" onClick={() => { onClose(); setPin(''); setError(''); }} style={{flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#374151', cursor: 'pointer', fontWeight: 500}}>Batal</button>
-             <button type="submit" style={{flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#166534', color: 'white', fontWeight: 600, cursor: 'pointer'}}>Verifikasi</button>
+          <input type="password" value={pin} autoFocus onChange={(e) => setPin(e.target.value)} placeholder="Password" style={{...styles.input, textAlign: 'center', fontSize: '18px', marginBottom: '16px', padding: '12px', width: '100%', boxSizing: 'border-box'}} />
+          {error && <div style={{color: '#ef4444', fontSize: '13px', marginBottom: '16px', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'}}><AlertCircle size={16}/> {error}</div>}
+          <div style={{display: 'flex', gap: '12px'}}>
+             <button type="button" onClick={() => { onClose(); setPin(''); setError(''); }} style={{flex: 1, padding: '12px', borderRadius: '8px', border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#111827', cursor: 'pointer', fontWeight: 600}}>Batal</button>
+             <button type="submit" style={{flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#16a34a', color: 'white', fontWeight: 600, cursor: 'pointer'}}>Verifikasi</button>
           </div>
        </form>
     </AnimatedModal>
