@@ -89,7 +89,7 @@ export const SearchableDropdown = ({ value, onChange, options, placeholder, isDa
               fontWeight: 600 
             }}
           >
-            Semua Marketer
+            All Marketer
           </div>
           {filteredOptions.length > 0 ? filteredOptions.map((opt: string) => (
             <div

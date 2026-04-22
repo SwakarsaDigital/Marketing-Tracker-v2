@@ -985,7 +985,7 @@ export default function App() {
                   {/* Judul Halaman dinamis */}
                   <div style={{width: '100%', marginBottom: '8px'}}>
                      <h2 style={{fontSize: isMobile ? '18px' : '22px', margin:0, color: isDark?'white':'#111827', fontWeight: 800}}>
-                        {activeTab === 'admin' ? 'Admin Dashboard - Kelola & Setujui Leads' : 'Daily Log - Semua Leads'}
+                        {activeTab === 'admin' ? 'Admin Dashboard - Kelola & Setujui Leads' : 'Daily Log - All Leads'}
                      </h2>
                   </div>
 
