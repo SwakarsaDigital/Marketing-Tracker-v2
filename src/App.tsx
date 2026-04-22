@@ -222,7 +222,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText,
         </div>
       </div>
       <div style={{display: 'flex', justifyContent: 'flex-end', gap: '12px'}}>
-        <button onClick={onClose} style={{padding: '10px 16px', borderRadius: '8px', border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#374151', cursor: 'pointer', fontWeight: 500}}>Batal</button>
+        <button onClick={onClose} style={{padding: '10px 16px', borderRadius: '8px', border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#374151', cursor: 'pointer', fontWeight: 500}}>Cancel</button>
         <button onClick={() => { onConfirm(); onClose(); }} style={{padding: '10px 16px', borderRadius: '8px', border: 'none', background: confirmColor, color: 'white', cursor: 'pointer', fontWeight: 600}}>{confirmText}</button>
       </div>
     </AnimatedModal>
@@ -383,7 +383,7 @@ export default function App() {
             date: dateStr,
             rawDateIso: rawDateIso,
             leadName: getValue("Lead Name", 1) || '-',
-            profileUrl: getValue("Bukti Google Drive", 2) || getValue("LinkedIn Profile URL", 2) || '',
+            profileUrl: getValue("Google Drive Proof", 2) || getValue("LinkedIn Profile URL", 2) || '',
             industry: getValue("Industry/Role", 3) || '-',
             source: getValue("Source Post/Influencer", 4) || '-',
             template: getValue("Template Used", 5) || '-',
@@ -402,7 +402,7 @@ export default function App() {
       }
     } catch (error) {
       console.error("Error fetching data:", error);
-      if (showLoader) showNotification("Koneksi gagal. Cek konsol.", 'error');
+      if (showLoader) showNotification("Connection failed. Check console.", 'error');
     } finally {
       if (showLoader) setLoading(false);
     }
@@ -564,7 +564,7 @@ export default function App() {
   // --- EXPORT TO EXCEL / CSV ---
   const handleExportCSV = () => {
     if (filteredLogs.length === 0) {
-      showNotification("Tidak ada data untuk di-export", "error");
+      showNotification("There is no data to export", "error");
       return;
     }
     
@@ -613,7 +613,7 @@ export default function App() {
       showNotification(successMsg, 'success');
       setTimeout(() => fetchData(false), 2500);
     } catch (error) {
-      showNotification('Gagal melakukan aksi sinkronisasi ke server.', 'error');
+      showNotification('Failed to perform synchronization action to server.', 'error');
       fetchData(false); // Revert UI
     }
   };
@@ -621,10 +621,10 @@ export default function App() {
   const handleFormSubmit = (data: any) => {
     setIsModalOpen(false); 
     if (editingLead) {
-      performActionSilently('edit', { ...data, rowNumber: editingLead.rowNumber }, 'Edit terkonfirmasi. Data berhasil diperbarui.');
+      performActionSilently('edit', { ...data, rowNumber: editingLead.rowNumber }, 'Edit confirmed. Data successfully updated.');
       setEditingLead(null);
     } else {
-      performActionSilently('create', { ...data, approvalStatus: 'None' }, 'Data baru berhasil ditambahkan.');
+      performActionSilently('create', { ...data, approvalStatus: 'None' }, 'New data successfully added.');
     }
   };
 
@@ -649,9 +649,9 @@ export default function App() {
     setIsMobileMenuOpen(false);
     setConfirmDialog({
       isOpen: true,
-      title: 'Konfirmasi Logout',
-      message: 'Apakah Anda yakin ingin keluar dari Admin Dashboard?',
-      confirmText: 'Ya, Keluar',
+      title: 'Confirm Logout',
+      message: 'Are you sure you want to leave the Admin Dashboard?',
+      confirmText: 'Yes, Logout',
       confirmColor: '#ef4444',
       icon: 'alert',
       onConfirm: () => {
@@ -665,12 +665,12 @@ export default function App() {
   const handleDeleteClick = (lead: DailyLog) => {
     setConfirmDialog({
       isOpen: true,
-      title: 'Konfirmasi Hapus',
-      message: <>Yakin ingin menghapus data pemasaran atas nama <b>{lead.leadName}</b>? Data ini akan hilang permanen.</>,
-      confirmText: 'Ya, Hapus',
+      title: 'Confirm Delete',
+      message: <>Are you sure you want to delete the marketing data for <b>{lead.leadName}</b>? This action cannot be undone.</>,
+      confirmText: 'Yes, Delete',
       confirmColor: '#ef4444',
       icon: 'alert',
-      onConfirm: () => performActionSilently('delete', lead, 'Data berhasil dihapus dari sistem.')
+      onConfirm: () => performActionSilently('delete', lead, 'Data successfully deleted from the system.')
     });
   };
 
@@ -680,15 +680,14 @@ export default function App() {
       title: 'Verifikasi & Approval',
       message: (
          <div style={{ textAlign: 'left', backgroundColor: isDark ? '#374151' : '#f3f4f6', padding: '16px', borderRadius: '8px', marginTop: '10px' }}>
-            <div style={{marginBottom: '6px', fontSize: '13px'}}>Nama Lead: <span style={{fontWeight: 600, color: isDark?'white':'black'}}>{lead.leadName}</span></div>
+            <div style={{marginBottom: '6px', fontSize: '13px'}}>Name Lead: <span style={{fontWeight: 600, color: isDark?'white':'black'}}>{lead.leadName}</span></div>
             <div style={{marginBottom: '6px', fontSize: '13px'}}>Marketer Email: <span style={{fontWeight: 600, color: isDark?'white':'black'}}>{lead.marketer}</span></div>
-            <div style={{marginBottom: '12px', fontSize: '13px'}}>Lead Email: <span style={{fontWeight: 700, color: '#0284c7'}}>{lead.email || '- Belum diisi -'}</span></div>
             <div style={{fontSize: '11px', color: isDark ? '#9ca3af' : '#6b7280', borderTop: isDark?'1px solid #4b5563':'1px solid #e5e7eb', paddingTop: '8px', lineHeight: 1.4}}>
-               Jika disetujui, status otomatis berubah menjadi "In Progress".
+               If approved, the status will automatically change to "In Progress".
             </div>
          </div>
       ),
-      confirmText: 'Ya, Setujui',
+      confirmText: 'Yes, Approve',
       confirmColor: '#16a34a',
       icon: 'check',
       onConfirm: () => handleAdminApprovalAction(lead, 'Approve')
@@ -733,7 +732,7 @@ export default function App() {
        approvalStatus: 'Pending'
     };
 
-    await performActionSilently('edit', dataToUpdate, `Request Approval dikirim untuk ${leadToUpdate.leadName}`);
+    await performActionSilently('edit', dataToUpdate, `Request Approval sent to ${leadToUpdate.leadName}`);
   };
 
   const handleAdminApprovalAction = async (lead: DailyLog, actionType: 'Approve' | 'Decline', reason?: string) => {
@@ -741,7 +740,7 @@ export default function App() {
 
     const newApprovalStatus = actionType === 'Approve' ? 'Approved' : 'Declined';
     const newStatus = actionType === 'Approve' ? 'In Progress' : lead.status;
-    const updatedNotes = actionType === 'Decline' && reason ? `[DITOLAK: ${reason}]\n${lead.notes}` : lead.notes;
+    const updatedNotes = actionType === 'Decline' && reason ? `[DECLINED: ${reason}]\n${lead.notes}` : lead.notes;
 
     setDailyLogs(prevLogs => prevLogs.map(l => 
        l.id === lead.id ? { ...l, approvalStatus: newApprovalStatus, status: newStatus, notes: updatedNotes } : l
@@ -766,7 +765,7 @@ export default function App() {
        declineReason: reason || '' // Bisa ditangkap oleh GAS jika diset up untuk kirim email notif
     };
 
-    await performActionSilently('edit', dataToUpdate, `${actionType} sukses untuk ${lead.leadName}.`);
+    await performActionSilently('edit', dataToUpdate, `${actionType} successful for ${lead.leadName}.`);
   };
 
   const switchTabMobile = (tab: any) => {
@@ -847,7 +846,7 @@ export default function App() {
             <button onClick={() => setApprovalModalLead(null)} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af', display: 'flex'}}><X size={20}/></button>
          </div>
          <p style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '16px'}}>
-            Masukkan <b>Lead Email</b> untuk mendaftarkan <b>{approvalModalLead?.leadName}</b>
+            Enter <b>Lead Email</b> to register <b>{approvalModalLead?.leadName}</b>
          </p>
          <form onSubmit={handleRequestApproval}>
             <input 
@@ -867,7 +866,7 @@ export default function App() {
             <button onClick={() => setDeclineModalLead(null)} style={{background:'none', border:'none', cursor:'pointer', color:'#9ca3af', display: 'flex'}}><X size={20}/></button>
          </div>
          <p style={{fontSize: '13px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '16px'}}>
-            Tolak request approval untuk <b>{declineModalLead?.leadName}</b>? Data akan dikembalikan ke Marketer. Berikan alasan penolakan agar marketer tahu:
+            Reject request approval for <b>{declineModalLead?.leadName}</b>? Data will be returned to the Marketer. Give reasons for rejection so that marketers know:
          </p>
          <form onSubmit={(e) => {
             e.preventDefault();
@@ -877,10 +876,10 @@ export default function App() {
             <textarea
               required autoFocus
               value={declineReason} onChange={(e) => setDeclineReason(e.target.value)}
-              placeholder="Tulis alasan penolakan..."
+              placeholder="Write rejection reason..."
               style={{...styles.input, marginBottom: '20px', width: '100%', height: '80px', resize: 'none', boxSizing: 'border-box'}}
             />
-            <button type="submit" style={{...styles.btnPrimary, backgroundColor: '#ef4444', width: '100%', justifyContent: 'center'}}>Tolak & Beri Alasan</button>
+            <button type="submit" style={{...styles.btnPrimary, backgroundColor: '#ef4444', width: '100%', justifyContent: 'center'}}>Reject & Provide Reason</button>
          </form>
       </AnimatedModal>
 
@@ -945,7 +944,7 @@ export default function App() {
         <div style={{display:'flex', gap:'12px'}}>
           {!isMobile && (
              <button onClick={() => isAdmin ? handleLogoutClick() : setIsLoginModalOpen(true)} style={{background: isAdmin ? '#ef4444' : '#3b82f6', border:'none', color:'white', borderRadius:'8px', padding:'8px 16px', fontSize:'13px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'}}>
-                {isAdmin ? <><Lock size={16}/> Keluar Admin</> : <><Shield size={16}/> Masuk Admin</>}
+                {isAdmin ? <><Lock size={16}/> Logout Admin</> : <><Shield size={16}/> Login Admin</>}
              </button>
           )}
           <button onClick={() => fetchData(true)} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:'8px', padding:'10px', cursor:'pointer', display: 'flex'}} title="Refresh Data">
@@ -993,7 +992,7 @@ export default function App() {
                   {/* Name Search */}
                   <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 100%' : '1 1 220px', minWidth: '150px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'}}>
                      <SearchIcon size={18} color={isDark ? "#9ca3af" : "#6b7280"}/>
-                     <input placeholder="Cari Lead Name..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '14px'}} />
+                     <input placeholder="Search for Lead Name..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '14px'}} />
                   </div>
                   
                   {/* Date Range Start */}
@@ -1014,7 +1013,7 @@ export default function App() {
                        value={marketerFilter} 
                        onChange={setMarketerFilter} 
                        options={availableMarketers} 
-                       placeholder="Semua Marketer Email (Cari...)" 
+                       placeholder="All Email Marketers (Search...)" 
                        isDark={isDark} 
                     />
                   </div>
@@ -1061,7 +1060,7 @@ export default function App() {
                       <th style={{...styles.th, textAlign: 'center'}}>No.</th>
                       <th style={styles.th}>Date</th>
                       <th style={styles.th}>Lead Name</th>
-                      <th style={styles.th}>Bukti GDrive</th> 
+                      <th style={styles.th}>Google Drive Proof</th> 
                       <th style={styles.th}>Lead Email</th>
                       <th style={styles.th}>Approval Status / Action</th> 
                       <th style={styles.th}>Status</th>
@@ -1169,9 +1168,9 @@ export default function App() {
               <div style={{background: isDark?'#374151':'#fee2e2', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px auto'}}>
                 <Lock size={40} color="#ef4444" />
               </div>
-              <h2 style={{color: isDark?'white':'#111827', marginBottom: '12px', fontSize: '24px'}}>Akses Terkunci</h2>
-              <p style={{color: isDark?'#9ca3af':'#6b7280', marginBottom: '24px', fontSize: '15px'}}>Anda harus masuk sebagai admin untuk melihat halaman ini.</p>
-              <button onClick={() => setIsLoginModalOpen(true)} style={{...styles.btnPrimary, margin: '0 auto', padding: '12px 24px'}}>Masuk Admin</button>
+              <h2 style={{color: isDark?'white':'#111827', marginBottom: '12px', fontSize: '24px'}}>Locked Access</h2>
+              <p style={{color: isDark?'#9ca3af':'#6b7280', marginBottom: '24px', fontSize: '15px'}}>You must log in as admin to view this page.</p>
+              <button onClick={() => setIsLoginModalOpen(true)} style={{...styles.btnPrimary, margin: '0 auto', padding: '12px 24px'}}>Login Admin</button>
            </div>
         )}
 
@@ -1185,7 +1184,7 @@ export default function App() {
                     {/* Search Marketer */}
                     <div style={{display:'flex', alignItems:'center', backgroundColor: isDark?'#374151':'white', border: isDark?'1px solid #4b5563':'1px solid #d1d5db', borderRadius:'8px', padding:'0 12px', flex: isMobile ? '1 1 100%' : '1 1 220px', minWidth: '150px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', width: isMobile ? '100%' : 'auto'}}>
                        <SearchIcon size={18} color={isDark ? "#9ca3af" : "#6b7280"}/>
-                       <input placeholder="Cari Email Marketer..." value={marketerSearchQuery} onChange={(e) => setMarketerSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '14px'}} />
+                       <input placeholder="Search Email Marketer..." value={marketerSearchQuery} onChange={(e) => setMarketerSearchQuery(e.target.value)} style={{border:'none', background:'transparent', padding:'10px', outline:'none', color: isDark?'white':'black', width:'100%', fontSize: '14px'}} />
                     </div>
                     
                     {/* Wrapper untuk Date Range agar tetap berdampingan/proporsional */}
@@ -1281,7 +1280,7 @@ export default function App() {
         {activeTab === 'kpi' && (
            <div style={{display:'grid', gridTemplateColumns: isMobile?'1fr':'repeat(4, 1fr)', gap:'24px'}}>
               <div style={{gridColumn: '1 / -1', background: isDark?'rgba(55, 65, 81, 0.5)':'#f3f4f6', padding: '16px', borderRadius: '8px', fontSize: '14px', color: isDark?'#d1d5db':'#4b5563', borderLeft: '4px solid #3b82f6'}}>
-                 Data KPI dihitung secara <b>otomatis</b> berdasarkan filter <b>Date Range</b> dan <b>Marketer Email</b> yang Anda pilih di menu Daily Log.
+                 KPI data is calculated <b>automatically</b> based on the <b>Date Range</b> and <b>Mail Marketer</b> filters you select in the Daily Log menu.
               </div>
               <div style={styles.card}>
                  <div style={{fontSize:'13px', textTransform:'uppercase', color: isDark?'#9ca3af':'#6b7280', fontWeight: 600, letterSpacing: '0.5px'}}>Total Leads</div>
@@ -1358,7 +1357,7 @@ const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: 
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <div>
-          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Tanggal Kontak</label>
+          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Contact Date</label>
           <input type="date" name="rawDateIso" value={formData.rawDateIso || ''} onChange={handleChange} required style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
         </div>
         <div>
@@ -1375,7 +1374,7 @@ const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: 
         )}
 
         <div>
-          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Bukti / Profile URL</label>
+          <label style={{ fontSize: '13px', color: isDark ? '#d1d5db' : '#4b5563', marginBottom: '6px', display: 'block', fontWeight: 500 }}>Proof/ Profile URL</label>
           <input type="text" name="url" value={formData.url || ''} onChange={handleChange} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
         </div>
         <div>
@@ -1450,8 +1449,8 @@ const InlineAddEditForm = ({ initialData, onSubmit, onCancel, isDark, styles }: 
       </div>
 
       <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-        <button type="button" onClick={onCancel} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#111827', cursor: 'pointer', fontWeight: 600 }}>Batal</button>
-        <button type="submit" style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#0284c7', color: 'white', fontWeight: 600, cursor: 'pointer' }}>{initialData ? 'Update Data' : 'Simpan Baru'}</button>
+        <button type="button" onClick={onCancel} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#111827', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+        <button type="submit" style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#0284c7', color: 'white', fontWeight: 600, cursor: 'pointer' }}>{initialData ? 'Data Update' : 'Save New Lead'}</button>
       </div>
     </form>
   );
@@ -1478,13 +1477,13 @@ const PinModal = ({ isOpen, onClose, onSubmit, isDark, styles }: any) => {
        </div>
        <h3 style={{marginTop:0, color: isDark?'white':'#111827', fontSize: '20px', fontWeight: 700}}>Login Admin</h3>
        <p style={{fontSize: '14px', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: '24px'}}>
-         Masukkan password admin untuk mengakses fitur Admin.
+         Enter the admin password to access the Admin feature.
        </p>
        <form onSubmit={handleSubmit}>
           <input type="password" value={pin} autoFocus onChange={(e) => setPin(e.target.value)} placeholder="Password" style={{...styles.input, textAlign: 'center', fontSize: '18px', marginBottom: '16px', padding: '12px', width: '100%', boxSizing: 'border-box'}} />
           {error && <div style={{color: '#ef4444', fontSize: '13px', marginBottom: '16px', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'}}><AlertCircle size={16}/> {error}</div>}
           <div style={{display: 'flex', gap: '12px'}}>
-             <button type="button" onClick={() => { onClose(); setPin(''); setError(''); }} style={{flex: 1, padding: '12px', borderRadius: '8px', border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#111827', cursor: 'pointer', fontWeight: 600}}>Batal</button>
+             <button type="button" onClick={() => { onClose(); setPin(''); setError(''); }} style={{flex: 1, padding: '12px', borderRadius: '8px', border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', background: 'transparent', color: isDark ? 'white' : '#111827', cursor: 'pointer', fontWeight: 600}}>Cancel</button>
              <button type="submit" style={{flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: '#16a34a', color: 'white', fontWeight: 600, cursor: 'pointer'}}>Verifikasi</button>
           </div>
        </form>

@@ -79,7 +79,7 @@ export function AddLeadForm({ styles, initialData, onSubmit, isMobile }: AddLead
     <form onSubmit={handleSubmit} style={{display:'flex', flexDirection:'column', gap:'16px'}}>
        <div style={{display:'grid', gridTemplateColumns: gridTemplate, gap: '12px'}}>
          <div>
-           <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Tanggal</label>
+           <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Date</label>
            <input required type="date" name="rawDateIso" value={formData.rawDateIso} onChange={handleChange} style={styles.input} />
          </div>
          <div>
@@ -93,7 +93,7 @@ export function AddLeadForm({ styles, initialData, onSubmit, isMobile }: AddLead
          <input required name="name" value={formData.name} onChange={handleChange} style={styles.input} placeholder="e.g. John Doe" />
        </div>
        <div>
-         <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Bukti Google Drive (Link)</label>
+         <label style={{display:'block', fontSize:'13px', marginBottom:'6px', color: '#6b7280', fontWeight: 500}}>Google Drive Proof (Link)</label>
          <input required type="url" name="url" value={formData.url} onChange={handleChange} style={styles.input} placeholder="https://drive.google.com/..." />
        </div>
        

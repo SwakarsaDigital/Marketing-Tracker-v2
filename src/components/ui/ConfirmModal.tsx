@@ -46,7 +46,7 @@ export const ConfirmModal = ({
               fontWeight: 600
             }}
           >
-            Batal
+            Cancel
           </button>
           <button 
             type="button" 
