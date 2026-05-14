@@ -1,142 +1,75 @@
 export const LXStyles = (isDark: boolean, isMobile: boolean) => ({
   container: { 
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', 
-    fontSize: '14px', 
-    color: isDark ? '#f9fafb' : '#333', 
-    height: '100vh', 
-    width: '100vw', 
-    display: 'flex', 
-    flexDirection: 'column' as const, 
-    backgroundColor: isDark ? '#111827' : '#f9fafb', 
-    overflow: 'hidden'
+    color: isDark ? '#f8fafc' : '#0f172a',
+    transition: 'color 0.3s ease',
+    overflowX: 'hidden'
   },
   header: { 
-    backgroundColor: '#166534', 
-    color: 'white', 
-    padding: isMobile ? '12px 16px' : '15px 20px', 
-    display: 'flex', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    zIndex: 20,
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+    padding: isMobile ? '10px 16px' : '12px 24px', 
+    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.9)', 
+    backdropFilter: 'blur(16px)', 
+    WebkitBackdropFilter: 'blur(16px)',
+    borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
+    position: 'sticky' as const, top: 0, zIndex: 50
   },
   tabBar: { 
     display: isMobile ? 'none' : 'flex', 
-    borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb', 
-    backgroundColor: isDark ? '#1f2937' : 'white', 
-    overflowX: 'auto' as const
+    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.9)', 
+    backdropFilter: 'blur(16px)', 
+    borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
+    padding: '0 24px', overflowX: 'auto' as const,
+    position: 'sticky' as const, top: '56px', zIndex: 40
   },
-  tab: (isActive: boolean) => ({
-    padding: '12px 20px', 
-    cursor: 'pointer', 
-    borderBottom: isActive ? '3px solid #166534' : '3px solid transparent',
-    color: isActive ? '#22c55e' : (isDark ? '#9ca3af' : '#6b7280'), 
-    fontWeight: isActive ? 600 : 500, 
-    display: 'flex', 
-    alignItems: 'center', 
-    gap: '8px',
-    backgroundColor: isActive ? (isDark ? '#064e3b' : '#f0fdf4') : 'transparent',
-    transition: 'all 0.2s ease', 
-    whiteSpace: 'nowrap' as const
+  tab: (active: boolean) => ({ 
+    padding: '12px 16px', cursor: 'pointer', fontSize: '13px',
+    borderBottom: active ? '2px solid #2563eb' : '2px solid transparent', 
+    color: active ? (isDark ? '#60a5fa' : '#2563eb') : (isDark ? '#94a3b8' : '#64748b'), 
+    fontWeight: active ? 700 : 500, 
+    display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' as const,
+    transition: 'all 0.3s ease'
   }),
   content: { 
-    padding: isMobile ? '15px' : '20px', 
-    overflow: 'auto', 
-    flex: 1, 
-    width: '100%', 
-    boxSizing: 'border-box' as const 
-  },
-  table: { 
-    width: '100%', 
-    borderCollapse: 'collapse' as const, 
-    backgroundColor: isDark ? '#1f2937' : 'white', 
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
-    borderRadius: '8px', 
-    overflow: 'hidden'
-  },
-  th: { 
-    padding: '12px', 
-    borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb', 
-    backgroundColor: isDark ? '#374151' : '#f9fafb', 
-    textAlign: 'left' as const, 
-    fontSize: '12px', 
-    fontWeight: 700, 
-    color: isDark ? '#d1d5db' : '#4b5563', 
-    whiteSpace: 'nowrap' as const 
-  },
-  td: { 
-    padding: '10px 12px', 
-    borderBottom: isDark ? '1px solid #374151' : '1px solid #e5e7eb', 
-    fontSize: '13px', 
-    color: isDark ? '#e5e7eb' : '#333'
-  },
-  input: { 
-    width: '100%', 
-    padding: '10px', 
-    border: isDark ? '1px solid #4b5563' : '1px solid #d1d5db', 
-    borderRadius: '6px', 
-    boxSizing: 'border-box' as const, 
-    backgroundColor: isDark ? '#374151' : 'white',
-    color: isDark ? '#fff' : '#000', 
-    outline: 'none', 
-    fontFamily: 'inherit'
+    padding: isMobile ? '12px' : '20px', 
+    maxWidth: '1440px', margin: '0 auto', 
+    width: '100%', boxSizing: 'border-box' as const 
   },
   card: { 
-    backgroundColor: isDark ? '#1f2937' : 'white', 
-    padding: '20px', 
-    borderRadius: '12px', 
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)', 
-    border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
-    display: 'flex', 
-    flexDirection: 'column' as const, 
-    justifyContent: 'center'
+    backgroundColor: isDark ? 'rgba(30, 41, 59, 0.6)' : 'rgba(255, 255, 255, 0.7)', 
+    backdropFilter: 'blur(12px)',
+    borderRadius: '10px', padding: isMobile ? '12px' : '16px', 
+    boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 20px rgba(0,0,0,0.03)', 
+    border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(255,255,255,1)',
   },
-  btnPrimary: {
-    backgroundColor:'#166534', 
-    color:'white', 
-    border:'none', 
-    padding:'10px 20px', 
-    borderRadius:'8px', 
-    cursor:'pointer', 
-    fontWeight:600, 
-    display: 'flex', 
-    alignItems: 'center', 
-    gap: '8px',
-    transition: 'background-color 0.2s', 
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: isMobile ? '11px' : '12px' },
+  th: { 
+    textAlign: 'left' as const, padding: isMobile ? '8px 10px' : '10px 14px', 
+    borderBottom: isDark ? '2px solid rgba(255,255,255,0.1)' : '2px solid rgba(0,0,0,0.05)', 
+    backgroundColor: isDark ? 'rgba(30,41,59, 0.5)' : 'rgba(248,250,252, 0.8)',
+    color: isDark ? '#94a3b8' : '#64748b', 
+    fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.5px', 
+    fontSize: isMobile ? '10px' : '11px', whiteSpace: 'nowrap' as const 
   },
-  modalOverlay: {
-    position: 'fixed' as const, 
-    top: 0, 
-    left: 0, 
-    right: 0, 
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
-    backdropFilter: 'blur(4px)',
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    zIndex: 1000
+  td: { 
+    padding: isMobile ? '8px 10px' : '10px 14px', fontSize: isMobile ? '11px' : '12px',
+    borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)', 
   },
-  modalContent: {
-    backgroundColor: isDark ? '#1f2937' : 'white', 
-    padding: '24px', 
-    borderRadius: '16px', 
-    width: '450px', 
-    maxWidth: '95%',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', 
-    maxHeight: '90vh', 
-    overflowY: 'auto' as const,
-    border: isDark ? '1px solid #374151' : 'none'
+  input: { 
+    padding: isMobile ? '8px 10px' : '8px 12px', borderRadius: '6px', fontSize: isMobile ? '12px' : '13px',
+    border: isDark ? '1px solid #475569' : '1px solid #cbd5e1', 
+    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.5)' : '#ffffff', 
+    color: isDark ? 'white' : 'black', outline: 'none', fontFamily: 'inherit', 
+    transition: 'all 0.3s ease', width: '100%', boxSizing: 'border-box' as const,
+    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
   },
-  actionBtn: {
-    padding: '6px', 
-    borderRadius: '6px', 
-    border: 'none', 
-    cursor: 'pointer', 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    transition: 'background 0.2s'
+  btnPrimary: { 
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', 
+    padding: isMobile ? '8px 12px' : '8px 16px', borderRadius: '6px', fontSize: isMobile ? '12px' : '13px',
+    backgroundColor: '#2563eb', color: 'white', border: 'none', cursor: 'pointer', 
+    fontWeight: 600
+  },
+  actionBtn: { 
+    border: 'none', cursor: 'pointer', borderRadius: '4px', padding: isMobile ? '4px' : '6px', 
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
   }
 });
