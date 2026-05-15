@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   FileText, Users, BarChart2, RefreshCw, Link as LinkIcon, X, 
   Search as SearchIcon, CheckSquare, Shield, Lock, Download, Edit, 
@@ -16,7 +17,22 @@ import {
 import InlineAddEditForm from './components/forms/InlineAddEditForm';
 
 export default function App() {
-  const [activeModule, setActiveModule] = useState<'Marketing Tracker' | 'ATS' | 'Resilio Partners'>('Marketing Tracker');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const activeModule = useMemo(() => {
+    if (location.pathname === '/ats') return 'ATS';
+    if (location.pathname === '/resilio') return 'Resilio Partners';
+    return 'Marketing Tracker';
+  }, [location.pathname]);
+
+  const handleModuleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = e.target.value;
+    if (selected === 'ATS') navigate('/ats');
+    else if (selected === 'Resilio Partners') navigate('/resilio');
+    else navigate('/');
+  };
+
   const [activeTab, setActiveTab] = useState<'daily' | 'influencer' | 'marketers' | 'kpi' | 'admin'>('daily');
   const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([]);
   
@@ -129,7 +145,6 @@ export default function App() {
     setSearchQuery(''); setMarketerFilter(''); setCurrentPage(1); 
   }, [activeModule]);
 
-  // === FILTERING LOGS ===
   const filteredLogs = useMemo(() => {
     return dailyLogs.filter(log => {
       let matchDate = true;
@@ -143,7 +158,8 @@ export default function App() {
       
       let matchPending = true;
       if (activeTab === 'admin') {
-         matchPending = (log.status === 'New' && log.approvalStatus !== 'Approved');
+         // Di Admin, hanya munculkan yang statusnya Pending dan Email sudah terisi
+         matchPending = (log.status === 'New' && log.approvalStatus === 'Pending' && log.email.trim() !== '');
       }
 
       return matchDate && matchName && matchMarketer && matchPending;
@@ -164,7 +180,6 @@ export default function App() {
 
   useEffect(() => { setCurrentPage(1); }, [searchQuery, dateRange, marketerFilter, activeTab, itemsPerPage]);
 
-  // === ADMIN KPI STATS ===
   const adminKpiStats = useMemo(() => {
     let total = 0, pending = 0, approved = 0, declined = 0;
     dailyLogs.forEach(log => {
@@ -178,10 +193,11 @@ export default function App() {
       const matchMarketer = marketerFilter ? log.marketer === marketerFilter : true;
 
       if (matchDate && matchName && matchMarketer) {
-         total++;
-         if (log.status === 'New' && log.approvalStatus !== 'Declined') pending++;
+         if (log.approvalStatus === 'Pending' && log.email.trim() !== '') pending++;
          else if (log.approvalStatus === 'Declined') declined++;
-         else approved++;
+         else if (log.approvalStatus === 'Approved') approved++;
+         
+         if ((log.approvalStatus === 'Pending' && log.email.trim() !== '') || log.approvalStatus === 'Approved' || log.approvalStatus === 'Declined') total++;
       }
     });
     return { total, pending, approved, declined };
@@ -240,9 +256,8 @@ export default function App() {
       .sort((a, b) => b.totalLeads - a.totalLeads);
   }, [dailyLogs, dateRange, marketerSearchQuery]);
 
-  // === HANDLERS ===
   const handleExportCSV = () => {
-    if (filteredLogs.length === 0) return showNotification("There is no data to export", "error");
+    if (filteredLogs.length === 0) return showNotification("Tidak ada data", "error");
     const headers = ['Date', 'Lead Name', 'Industry', 'Source', 'Template', 'Type', 'Tagged', 'Response Time', 'Status', 'Notes', 'Marketer Email', 'Lead Email', 'Approval Status'];
     const csvRows = [headers.join(',')];
     filteredLogs.forEach(row => {
@@ -257,7 +272,6 @@ export default function App() {
   };
 
   const performActionSilently = async (actionType: 'create' | 'edit' | 'delete', data: any, successMsg: string) => {
-    // OPTIMISTIC UPDATE: Lenyapkan seketika dari layar saat mendelete
     if (actionType === 'delete') {
       setDailyLogs(prev => prev.filter(log => log.id !== data.id));
     }
@@ -267,7 +281,7 @@ export default function App() {
         action: actionType, 
         module: activeModule, 
         ...data, 
-        name: data.leadName || data.name, // Dikirim untuk fitur Smart Delete Backend
+        name: data.leadName || data.name,
         rowNumber: data.rowNumber 
       };
 
@@ -278,7 +292,7 @@ export default function App() {
       });
 
       showNotification(successMsg, 'success');
-      setTimeout(() => fetchData(false), 2000); // Fetch di belakang layar
+      setTimeout(() => fetchData(false), 2000);
     } catch (error) { 
       showNotification('Gagal menghubungi server.', 'error'); 
       fetchData(false); 
@@ -288,10 +302,10 @@ export default function App() {
   const handleFormSubmit = (data: any) => {
     setIsModalOpen(false); 
     if (editingLead) { 
-      performActionSilently('edit', { ...data, rowNumber: editingLead.rowNumber }, 'Edit confirmed. Data successfully updated.'); 
+      performActionSilently('edit', { ...data, rowNumber: editingLead.rowNumber }, 'Edit berhasil. Data ter-update.'); 
       setEditingLead(null); 
     } else {
-      performActionSilently('create', { ...data, approvalStatus: 'Pending' }, 'New data successfully added.');
+      performActionSilently('create', { ...data, approvalStatus: 'None' }, 'Data baru berhasil ditambah.');
     }
   };
 
@@ -308,19 +322,18 @@ export default function App() {
 
   const handleLogoutClick = () => {
     setIsMobileMenuOpen(false);
-    setConfirmDialog({ isOpen: true, title: 'Confirm Logout', message: 'Are you sure you want to leave the Admin Dashboard?', confirmText: 'Yes, Logout', confirmColor: '#ef4444', icon: 'alert', onConfirm: () => { setIsAdmin(false); localStorage.removeItem('isAdminLoggedIn'); setActiveTab('daily'); } });
+    setConfirmDialog({ isOpen: true, title: 'Confirm Logout', message: 'Apakah Anda yakin ingin keluar dari Admin Dashboard?', confirmText: 'Ya, Logout', confirmColor: '#ef4444', icon: 'alert', onConfirm: () => { setIsAdmin(false); localStorage.removeItem('isAdminLoggedIn'); setActiveTab('daily'); } });
   };
 
-  // --- ACTION HANDLERS (DELETE, APPROVE, DECLINE) ---
   const handleDeleteClick = (lead: DailyLog) => {
     setConfirmDialog({
       isOpen: true,
       title: 'Confirm Delete',
-      message: <>Are you sure you want to delete the data for <b style={{color: isDark ? 'white' : 'black'}}>{lead.leadName}</b>? This action cannot be undone.</>,
-      confirmText: 'Yes, Delete',
+      message: <>Apakah Anda yakin ingin menghapus data untuk <b style={{color: isDark ? 'white' : 'black'}}>{lead.leadName}</b>? Aksi ini tidak dapat dibatalkan.</>,
+      confirmText: 'Ya, Hapus',
       confirmColor: '#ef4444',
       icon: 'alert',
-      onConfirm: () => performActionSilently('delete', lead, 'Data successfully deleted from the system.')
+      onConfirm: () => performActionSilently('delete', lead, 'Data berhasil dihapus dari sistem.')
     });
   };
 
@@ -333,11 +346,11 @@ export default function App() {
             <div style={{marginBottom: '8px', fontSize: '13px'}}>Name Lead: <span style={{fontWeight: 700, color: isDark?'white':'#0f172a'}}>{lead.leadName}</span></div>
             <div style={{marginBottom: '8px', fontSize: '13px'}}>Marketer Email: <span style={{fontWeight: 700, color: isDark?'white':'#0f172a'}}>{lead.marketer}</span></div>
             <div style={{fontSize: '11px', color: isDark ? '#94a3b8' : '#64748b', borderTop: isDark?'1px solid rgba(255,255,255,0.1)':'1px solid #e2e8f0', paddingTop: '10px', lineHeight: 1.4}}>
-               If approved, the status will automatically change to "In Progress".
+               Jika di-approve, status otomatis berubah ke "In Progress".
             </div>
          </div>
       ),
-      confirmText: 'Yes, Approve',
+      confirmText: 'Ya, Approve',
       confirmColor: '#10b981',
       icon: 'check',
       onConfirm: () => handleAdminApprovalAction(lead, 'Approve')
@@ -356,16 +369,15 @@ export default function App() {
     const updatedNotes = actionType === 'Decline' && reason ? `[DECLINED: ${reason}]\n${lead.notes}` : lead.notes;
     
     setDailyLogs(prevLogs => prevLogs.map(l => l.id === lead.id ? { ...l, approvalStatus: newApprovalStatus, status: newStatus, notes: updatedNotes } : l));
-    await performActionSilently('edit', { rowNumber: lead.rowNumber, rawDateIso: lead.rawDateIso, name: lead.leadName, url: lead.profileUrl, industry: lead.industry, source: lead.source, template: lead.template, interactionType: lead.interactionType, tagged: lead.tagged, responseTime: lead.responseTime, status: newStatus, notes: updatedNotes, marketer: lead.marketer, email: lead.email, approvalStatus: newApprovalStatus, declineReason: reason || '' }, `${actionType} successful for ${lead.leadName}.`);
+    await performActionSilently('edit', { rowNumber: lead.rowNumber, rawDateIso: lead.rawDateIso, name: lead.leadName, url: lead.profileUrl, industry: lead.industry, source: lead.source, template: lead.template, interactionType: lead.interactionType, tagged: lead.tagged, responseTime: lead.responseTime, status: newStatus, notes: updatedNotes, marketer: lead.marketer, email: lead.email, approvalStatus: newApprovalStatus, declineReason: reason || '' }, `${actionType} sukses untuk ${lead.leadName}.`);
   };
 
   const handleRequestApproval = async (e: any) => {
     e.preventDefault(); if (!approvalModalLead || !approvalEmail) return;
     setDailyLogs(prevLogs => prevLogs.map(log => log.id === approvalModalLead.id ? { ...log, email: approvalEmail, approvalStatus: 'Pending' } : log));
-    await performActionSilently('edit', { ...approvalModalLead, email: approvalEmail, approvalStatus: 'Pending', name: approvalModalLead.leadName, url: approvalModalLead.profileUrl }, `Request Approval sent to ${approvalModalLead.leadName}`);
+    await performActionSilently('edit', { ...approvalModalLead, email: approvalEmail, approvalStatus: 'Pending', name: approvalModalLead.leadName, url: approvalModalLead.profileUrl }, `Request Approval dikirim untuk ${approvalModalLead.leadName}`);
     setApprovalModalLead(null); setApprovalEmail('');
   };
-
 
   return (
     <div style={styles.container as any} className={`bg-gradient-animate ${isDark ? 'dark' : ''}`}>
@@ -387,7 +399,7 @@ export default function App() {
          <div style={{display:'flex', justifyContent:'space-between', marginBottom:'12px'}}><h3 style={{margin:0, fontSize: '16px', fontWeight: 800}}>Request Approval</h3><button onClick={() => setApprovalModalLead(null)} style={{background:'none', border:'none', cursor:'pointer', color:'#94a3b8', display: 'flex'}}><X size={18}/></button></div>
          <form onSubmit={handleRequestApproval}>
             <input type="email" required autoFocus value={approvalEmail} onChange={(e) => setApprovalEmail(e.target.value)} placeholder="lead.email@example.com" style={{...styles.input as any, marginBottom: '16px', width: '100%', boxSizing: 'border-box'}} />
-            <button type="submit" className="btn-glow" style={{...styles.btnPrimary as any, width: '100%'}}>Kirim Request</button>
+            <button type="submit" className="btn-glow" style={{...styles.btnPrimary as any, width: '100%'}}>Send Request</button>
          </form>
       </AnimatedModal>
 
@@ -399,7 +411,7 @@ export default function App() {
          </form>
       </AnimatedModal>
 
-      {/* Mobile Menu */}
+      {/* Mobile Sidebar */}
       {isMobile && isMobileMenuOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, backdropFilter: 'blur(4px)' }} onClick={() => setIsMobileMenuOpen(false)}>
            <div style={{ width: '260px', height: '100%', backgroundColor: isDark ? '#0f172a' : '#ffffff', padding: '20px 0', display: 'flex', flexDirection: 'column', animation: 'slideInLeft 0.3s forwards' }} onClick={e => e.stopPropagation()}>
@@ -408,8 +420,8 @@ export default function App() {
                  <button onClick={() => setIsMobileMenuOpen(false)} style={{background:'none', border:'none', color: isDark?'#fff':'#000', cursor:'pointer', display: 'flex'}}><X size={20}/></button>
               </div>
               <div style={{padding: '0 16px', marginBottom: '12px'}}>
-                 <label style={{fontSize: '11px', fontWeight: 700, color: isDark ? '#94a3b8' : '#64748b', textTransform: 'uppercase', letterSpacing: '1px'}}>Pilih Modul Database</label>
-                 <select value={activeModule} onChange={(e) => { setActiveModule(e.target.value as any); setIsMobileMenuOpen(false); }} style={{...styles.input as any, width: '100%', marginTop: '6px', fontSize: '13px', fontWeight: 700, background: isDark?'rgba(255,255,255,0.05)':'#eff6ff', color: isDark?'white':'#1e3a8a'}}>
+                 <label style={{fontSize: '11px', fontWeight: 700, color: isDark ? '#94a3b8' : '#64748b', textTransform: 'uppercase', letterSpacing: '1px'}}>Pilih Halaman Link</label>
+                 <select value={activeModule} onChange={handleModuleChange} style={{...styles.input as any, width: '100%', marginTop: '6px', fontSize: '13px', fontWeight: 700, background: isDark?'rgba(255,255,255,0.05)':'#eff6ff', color: isDark?'white':'#1e3a8a'}}>
                     <option value="Marketing Tracker">Marketing Tracker</option>
                     <option value="ATS">ATS</option>
                     <option value="Resilio Partners">Resilio Partners</option>
@@ -435,7 +447,8 @@ export default function App() {
              <Layers size={18} />
            </div>
            <div>
-             <select value={activeModule} onChange={(e) => setActiveModule(e.target.value as any)} style={{fontSize: isMobile ? '15px' : '18px', margin:0, fontWeight:800, background: 'transparent', color: isDark ? 'white' : '#0f172a', border: 'none', outline: 'none', cursor: 'pointer', appearance: 'none', paddingRight: '4px', transition: 'all 0.3s'}}>
+             {/* DROPDOWN ROUTING LINK URL */}
+             <select value={activeModule} onChange={handleModuleChange} style={{fontSize: isMobile ? '15px' : '18px', margin:0, fontWeight:800, background: 'transparent', color: isDark ? 'white' : '#0f172a', border: 'none', outline: 'none', cursor: 'pointer', appearance: 'none', paddingRight: '4px', transition: 'all 0.3s'}}>
                <option value="Marketing Tracker">Marketing Tracker ▾</option>
                <option value="ATS">ATS ▾</option>
                <option value="Resilio Partners">Resilio Partners ▾</option>
@@ -488,14 +501,14 @@ export default function App() {
                           {activeTab === 'admin' ? `Admin Panel` : `Records`}
                        </h2>
                        
-                       {/* Dropdown Pintasan Database Khusus Area Dalam Admin */}
+                       {/* Dropdown Pintasan URL Khusus Area Dalam Admin */}
                        {activeTab === 'admin' && (
                          <div style={{display: 'flex', alignItems: 'center', gap: '6px', background: isDark?'rgba(0,0,0,0.2)':'rgba(0,0,0,0.03)', padding: '4px 8px', borderRadius: '6px'}}>
                             <Layers size={14} color={isDark ? "#9ca3af" : "#64748b"} />
-                            <span style={{fontSize: '11px', fontWeight: 700, color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase'}}>DB:</span>
+                            <span style={{fontSize: '11px', fontWeight: 700, color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase'}}>DB Link:</span>
                             <select 
                                value={activeModule} 
-                               onChange={(e) => setActiveModule(e.target.value as any)}
+                               onChange={handleModuleChange}
                                style={{
                                   border: 'none', background: 'transparent', outline: 'none', 
                                   color: '#10b981', 
@@ -607,13 +620,15 @@ export default function App() {
                                  </div>
                               ) : (
                                  row.status === 'New' ? (
-                                    row.approvalStatus === 'Declined' ? (
+                                    (row.approvalStatus === 'Pending' && row.email.trim() !== '') ? (
+                                       <span style={{color: '#d97706', fontSize: '11px', fontWeight: 700, display: 'inline-block', whiteSpace: 'nowrap'}}>Pending Approval...</span>
+                                    ) : row.approvalStatus === 'Declined' ? (
                                        <div style={{display:'flex', flexDirection: 'column', gap:'2px'}}>
                                           <span style={{color: '#ef4444', fontSize: '11px', fontWeight: 700}}>Declined</span>
                                           <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'9px', padding: '2px 6px', borderRadius:'4px', background: isDark?'rgba(255,255,255,0.1)':'#f1f5f9', color:isDark?'white':'#0f172a', border:isDark?'1px solid rgba(255,255,255,0.1)':'1px solid #e2e8f0', cursor:'pointer', whiteSpace: 'nowrap', fontWeight: 600}}>Req Again</button>
                                        </div>
                                     ) : (
-                                       <span style={{color: '#d97706', fontSize: '11px', fontWeight: 700, display: 'inline-block', whiteSpace: 'nowrap'}}>Pending Approval...</span>
+                                       <button onClick={() => setApprovalModalLead(row)} style={{fontSize:'10px', padding: '4px 8px', borderRadius:'6px', background: isDark?'rgba(37,99,235,0.1)':'#eff6ff', color:'#2563eb', border:'none', cursor:'pointer', whiteSpace: 'nowrap', fontWeight: 700, transition: 'all 0.2s'}}>Req Approval</button>
                                     )
                                  ) : <span style={{color:'#10b981', fontSize:'11px', fontWeight: 700, display: 'inline-block', whiteSpace: 'nowrap'}}>Approved</span>
                               )}
